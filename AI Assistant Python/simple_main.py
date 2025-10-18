@@ -58,7 +58,7 @@ Base.metadata.create_all(bind=engine)
 # Initialize the OpenAI service
 openai_service = OpenAIService()
 
-async def analyze_image_with_ai(image_content: bytes, content_type: str) -> str:
+async def analyze_image_with_ai(image_content: bytes, content_type: str) -> str: #define the function as async
     """Analyze image using Azure OpenAI Vision API"""
     try:
         # Convert image to base64
