@@ -10,6 +10,7 @@ import pandas as pd
 import io
 from typing import List
 import base64
+from pathlib import Path
 
 # Load environment variables from .env file
 load_dotenv()
@@ -21,8 +22,11 @@ logger = logging.getLogger(__name__)
 # Create FastAPI app
 app = FastAPI(title="AI Duty Officer Assistant", version="1.0.0")
 
-# Setup static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+#Get the absolute path to your static directory
+static_path = Path(__file__).parent / "static"
+
+#setup static files with absolute path
+app.mount("/static", StaticFiles(directory=static_path), name="static")
 
 # Setup templates with correct path
 import os
@@ -617,4 +621,4 @@ async def delete_knowledge(knowledge_id: int, db: Session = Depends(get_db)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8002)
+    uvicorn.run(app, host="localhost", port=8002)
