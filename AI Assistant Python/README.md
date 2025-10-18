@@ -1,6 +1,82 @@
 # AI Duty Officer Assistant - Python FastAPI Version
 
-This is the Python FastAPI equivalent of the C# ASP.NET Core AI Duty Officer Assistant.
+# AI Duty Officer Assistant - Enhanced Edition
+
+A comprehensive maritime operations incident management system powered by Azure OpenAI, featuring automated log analysis, email monitoring, and integrated ticketing workflows.
+
+## 🌟 New Features Added
+
+### 1. 📁 Direct Log Analysis
+- **File Upload Interface**: Upload system logs, error logs, and diagnostic files directly through the web interface
+- **Multi-Format Support**: Supports .log, .txt, .csv, .json, .xml files
+- **AI-Powered Analysis**: Automatically analyzes log content for error patterns, timestamps, and root causes
+- **Visual Preview**: Preview log files before submission with syntax highlighting
+
+### 2. 📧 Automated Incident Ingestion
+- **Email Monitoring**: Continuously monitors designated email inbox for incident reports
+- **Smart Reply Filtering**: Automatically filters out simple replies ("yes", "no", "hello", "thanks") to prevent false incidents
+- **AI Classification**: Uses GPT-4 to distinguish genuine incidents from conversational messages
+- **Auto-Processing**: Creates incident records automatically from validated email content
+- **Confirmation System**: Sends automatic confirmation emails with incident IDs
+- **Multi-Source Support**: Handles reports from emails, SMS, phone calls, and system alerts
+- **Pattern Recognition**: Detects auto-replies, out-of-office messages, and quoted text
+
+### 3. 🎫 Ticketing and Escalation System
+- **Jira Integration**: Automatically creates Jira tickets with AI-generated summaries
+- **ServiceNow Support**: Full integration with ServiceNow incident management
+- **Executive Summaries**: Generates non-technical summaries for management escalation
+- **Smart Priority Detection**: AI determines appropriate priority levels based on content
+- **Stakeholder Notifications**: Automatic notifications for high-priority incidents
+- **Escalation Workflows**: Configurable escalation paths and timing
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.9+
+- Azure OpenAI account with GPT-4 Vision access
+- Email account (Gmail/Outlook) for monitoring
+- Optional: Jira or ServiceNow instance for ticketing
+
+### Installation
+
+1. **Clone and Setup**
+```bash
+cd "AI Assistant Python"
+pip install -r requirements.txt
+```
+
+2. **Configuration**
+```bash
+# Copy the example configuration
+cp .env.example .env
+
+# Edit .env with your credentials
+notepad .env  # On Windows
+```
+
+3. **Essential Configuration**
+```bash
+# Azure OpenAI (Required)
+AZURE_OPENAI_API_KEY=your_api_key
+AZURE_OPENAI_ENDPOINT=https://your-resource.azure-api.net
+
+# Email Monitoring (Optional)
+EMAIL_MONITORING_ENABLED=true
+EMAIL_ADDRESS=incidents@yourcompany.com
+EMAIL_PASSWORD=your_app_password
+
+# Ticketing (Optional)
+AUTO_CREATE_TICKETS=true
+JIRA_URL=https://yourcompany.atlassian.net
+JIRA_TOKEN=your_api_token
+```
+
+4. **Run the Application**
+```bash
+python simple_main.py
+```
+
+Access at: http://localhost:8002
 
 ## Features
 

@@ -21,6 +21,28 @@
                 </h5>
             </div>
             <div class="card-body">
+                <!-- Input Validation Error Alert -->
+                {% if error %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Input Validation Failed:</strong> {{ error }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                
+                <!-- Helpful Examples After Error -->
+                <div class="alert alert-info" role="alert">
+                    <h6 class="fw-bold mb-2">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        Valid Incident Description Examples:
+                    </h6>
+                    <ul class="mb-1">
+                        <li><strong>Technical Issue:</strong> "Container CMAU123456 showing duplicate entries in PORTNET system causing discharge delays"</li>
+                        <li><strong>System Error:</strong> "EDI message processing failure, getting ERROR status on all incoming vessel manifests"</li>
+                        <li><strong>Equipment Problem:</strong> "Terminal 3 crane malfunction, operations halted, getting hydraulic pressure warnings"</li>
+                    </ul>
+                </div>
+                {% endif %}
+                
                 <form method="post" action="/analyze" enctype="multipart/form-data">
                     <div class="mb-3">
                         <label for="incidentDescription" class="form-label fw-bold">
@@ -32,7 +54,7 @@
                             name="incident_description"
                             rows="4" 
                             placeholder="Provide a detailed description of the maritime operations incident..."
-                            required>{% if preloaded_description %}{{ preloaded_description }}{% endif %}</textarea>
+                            required>{% if preloaded_description %}{{ preloaded_description }}{% elif description %}{{ description }}{% endif %}</textarea>
                         <div class="form-text">
                             <i class="fas fa-lightbulb text-warning me-1"></i>
                             Include system names, error messages, container numbers, vessel details, or any relevant identifiers
@@ -64,6 +86,26 @@
                         <div id="imagePreview" class="mt-2 row g-2"></div>
                     </div>
                     
+                    <!-- Log File Upload Section -->
+                    <div class="mb-3">
+                        <label for="logFiles" class="form-label fw-bold">
+                            <i class="fas fa-file-alt me-1"></i>
+                            System Log Files <span class="text-muted">(Optional)</span>
+                        </label>
+                        <input 
+                            class="form-control" 
+                            type="file" 
+                            id="logFiles" 
+                            name="log_files"
+                            accept=".log,.txt,.csv,.json,.xml"
+                            multiple>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle text-info me-1"></i>
+                            Upload system logs, error logs, or diagnostic files for detailed AI analysis. Supported formats: .log, .txt, .csv, .json, .xml
+                        </div>
+                        <div id="logPreview" class="mt-2"></div>
+                    </div>
+
                     <div class="mb-3">
                         <label for="incidentSource" class="form-label fw-bold">Source</label>
                         <select class="form-select" id="incidentSource" name="incident_source">
@@ -72,6 +114,7 @@
                             <option value="SMS">SMS</option>
                             <option value="Call">Phone Call</option>
                             <option value="System">System Alert</option>
+                            <option value="Log Analysis">Log File Analysis</option>
                         </select>
                     </div>
                     
@@ -366,5 +409,90 @@ function stopCamera() {
 document.getElementById('cameraModal').addEventListener('hidden.bs.modal', function() {
     stopCamera();
 });
+
+// Log File Preview Functionality
+document.getElementById('logFiles').addEventListener('change', function(e) {
+    const files = e.target.files;
+    const preview = document.getElementById('logPreview');
+    preview.innerHTML = '';
+
+    if (files.length > 0) {
+        const container = document.createElement('div');
+        container.className = 'row g-2 mt-2';
+        
+        Array.from(files).forEach((file, index) => {
+            const col = document.createElement('div');
+            col.className = 'col-md-6';
+            
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="card-body p-2">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-file-alt text-info me-2"></i>
+                        <div class="flex-grow-1">
+                            <div class="fw-bold small">${file.name}</div>
+                            <div class="text-muted small">${(file.size / 1024).toFixed(1)} KB</div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="previewLogFile(${index})">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            col.appendChild(card);
+            container.appendChild(col);
+        });
+        
+        preview.appendChild(container);
+    }
+});
+
+function previewLogFile(index) {
+    const files = document.getElementById('logFiles').files;
+    const file = files[index];
+    
+    if (file.size > 1024 * 1024) { // 1MB limit for preview
+        alert('File too large for preview. It will still be analyzed.');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const content = e.target.result;
+        const lines = content.split('\n').slice(0, 20); // Show first 20 lines
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal fade';
+        modal.innerHTML = `
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Log File Preview: ${file.name}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <pre class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto; font-size: 12px;">${lines.join('\n')}</pre>
+                        ${content.split('\n').length > 20 ? '<p class="text-muted mt-2"><i class="fas fa-info-circle"></i> Showing first 20 lines. Full file will be analyzed.</p>' : ''}
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        const bsModal = new bootstrap.Modal(modal);
+        bsModal.show();
+        
+        modal.addEventListener('hidden.bs.modal', function() {
+            modal.remove();
+        });
+    };
+    
+    reader.readAsText(file);
+}
 </script>
 {% endblock %}

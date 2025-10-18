@@ -310,6 +310,46 @@ Focus on maritime operations context including PORTNET®, container management, 
             affected_systems=affected_systems[:10]  # Limit to 10 systems
         )
     
+    async def get_completion(self, messages: List[dict], max_tokens: int = 150, temperature: float = 0.1) -> str:
+        """Get a simple completion from Azure OpenAI for classification tasks"""
+        if not self.configured:
+            logger.warning("Azure OpenAI not configured, using fallback response")
+            # Simple fallback for classification
+            content = messages[0].get('content', '').lower()
+            if any(word in content for word in ['yes', 'no', 'hello', 'thanks', 'ok']):
+                return "SIMPLE_REPLY"
+            return "POTENTIAL_INCIDENT"
+        
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                url = f"{self.endpoint}/openai/deployments/{self.deployment_id}/chat/completions?api-version={self.api_version}"
+                
+                headers = {
+                    "Content-Type": "application/json",
+                    "api-key": self.api_key
+                }
+                
+                data = {
+                    "messages": messages,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                    "top_p": 0.95
+                }
+                
+                response = await client.post(url, headers=headers, json=data)
+                response.raise_for_status()
+                
+                result = response.json()
+                return result['choices'][0]['message']['content']
+                
+        except Exception as e:
+            logger.error(f"Error getting completion: {e}")
+            # Fallback classification
+            content = messages[0].get('content', '').lower()
+            if any(word in content for word in ['yes', 'no', 'hello', 'thanks', 'ok', 'meeting', 'lunch', 'birthday']):
+                return "SIMPLE_REPLY"
+            return "POTENTIAL_INCIDENT"
+    
     async def generate_resolution_plan_async(self, description: str, analysis: IncidentAnalysis) -> dict:
         """Generate resolution plan using AI based on incident description and analysis"""
         

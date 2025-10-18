@@ -70,6 +70,74 @@ async def analyze_image_with_ai(image_content: bytes, content_type: str) -> str:
         logger.error(f"Error analyzing image: {ex}")
         return "[Image analysis failed] "
 
+async def validate_incident_input(description: str) -> dict:
+    """
+    Use AI to validate if the input is a legitimate incident description
+    Returns validation result with reasoning
+    """
+    try:
+        # Basic checks first
+        description = description.strip()
+        
+        # Empty or too short
+        if len(description) < 5:
+            return {
+                "valid": False,
+                "reason": "Description too short - please provide more details about the incident"
+            }
+        
+        # Too long (potential spam/copy-paste)
+        if len(description) > 5000:
+            return {
+                "valid": False, 
+                "reason": "Description too long - please provide a concise incident summary"
+            }
+        
+        # Use AI to validate content quality
+        validation_prompt = f"""You are validating incident reports for a maritime operations system. Determine if this input is a legitimate incident description.
+
+Input: {description[:800]}
+
+VALID incident descriptions include:
+- Technical problems (system errors, equipment failures)
+- Operational issues (delays, process problems) 
+- Safety concerns or incidents
+- Infrastructure problems
+- Service disruptions
+- Detailed problem reports with context
+
+INVALID inputs include:
+- Random text or gibberish ("asdf", "test", "hello world")
+- Single words or very short phrases without context
+- Nonsensical combinations of words
+- Personal messages not related to operations
+- Jokes, memes, or casual conversation
+- Testing inputs or placeholder text
+- Spam or repeated characters
+
+Respond with only: VALID or INVALID"""
+
+        response = await openai_service.get_completion(
+            messages=[{"role": "user", "content": validation_prompt}],
+            max_tokens=10,
+            temperature=0.05
+        )
+        
+        validation = response.strip().upper()
+        
+        if validation == "INVALID":
+            return {
+                "valid": False,
+                "reason": "Input appears to be random text or not a legitimate incident report. Please provide a clear description of an operational issue, technical problem, or safety concern."
+            }
+        
+        return {"valid": True, "reason": "Input validated successfully"}
+        
+    except Exception as e:
+        logger.error(f"Error validating input: {e}")
+        # If validation fails, be conservative and allow through
+        return {"valid": True, "reason": "Validation service unavailable - input accepted"}
+
 class MockResolutionStep:
     def __init__(self, order, description, step_type="Analysis"):
         self.order = order
@@ -139,6 +207,34 @@ async def analyze_post(
 ):
     """Analyze incident - POST"""
     try:
+        # Validate incident input first
+        validation_result = await validate_incident_input(incident_description)
+        
+        if not validation_result["valid"]:
+            logger.warning(f"Invalid incident input rejected: {incident_description[:50]}...")
+            error_message = validation_result["reason"]
+            return templates.TemplateResponse("analyze.html", {
+                "request": request,
+                "error": error_message,
+                "description": incident_description,
+                "test_cases": [
+                    {
+                        "title": "Container System Error",
+                        "description": "PORTNET container CMAU123456 showing duplicate entries causing discharge delays"
+                    },
+                    {
+                        "title": "EDI Processing Failure", 
+                        "description": "EDI message IFT-001 stuck in ERROR status, ack_at field NULL for 2 hours"
+                    },
+                    {
+                        "title": "Vessel Berth Issue",
+                        "description": "MV Pacific Star unable to berth at Terminal 3 due to equipment malfunction"
+                    }
+                ]
+            })
+        
+        logger.info(f"Input validation passed: {validation_result['reason']}")
+        
         # Process uploaded images
         image_analysis = ""
         uploaded_images = []

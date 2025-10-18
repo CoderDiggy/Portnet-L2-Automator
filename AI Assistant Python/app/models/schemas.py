@@ -48,6 +48,112 @@ class ResolutionPlan(BaseModel):
     diagnostic_queries: List[str] = []
     resolution_queries: List[str] = []
     summary: str = ""
+
+# Enhanced Features Schemas
+
+# Log File Models
+class LogFileBase(BaseModel):
+    filename: str
+    original_name: str
+    file_path: str
+    file_size: int
+    content_type: str = "text/plain"
+    analysis_result: Optional[str] = None
+
+class LogFileCreate(LogFileBase):
+    pass
+
+class LogFile(LogFileBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    uploaded_at: datetime = Field(default_factory=datetime.utcnow)
+    incident_id: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+# Email Incident Models
+class EmailIncidentBase(BaseModel):
+    sender: str
+    subject: str
+    email_content: str
+    received_at: datetime
+    classification: str = "Incident"  # Incident, Spam, Information
+
+class EmailIncidentCreate(EmailIncidentBase):
+    pass
+
+class EmailIncident(EmailIncidentBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    processed_at: datetime = Field(default_factory=datetime.utcnow)
+    incident_id: Optional[str] = None
+    auto_created: bool = True
+    ai_extracted_data: Optional[dict] = None
+    
+    class Config:
+        from_attributes = True
+
+# Ticket Integration Models
+class TicketBase(BaseModel):
+    ticket_system: str  # Jira, ServiceNow, Internal
+    ticket_id: str
+    ticket_url: Optional[str] = None
+    priority: str = "Medium"
+    status: str = "Open"
+
+class TicketCreate(TicketBase):
+    pass
+
+class Ticket(TicketBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    incident_id: str
+    escalation_data: Optional[dict] = None
+    
+    class Config:
+        from_attributes = True
+
+# Escalation Models
+class EscalationSummary(BaseModel):
+    executive_summary: str
+    business_impact: str
+    urgency_justification: str
+    resource_requirements: str
+    estimated_resolution_time: str
+    stakeholder_notification: List[str] = []
+    escalation_level: str = "Medium"  # Low, Medium, High, Critical
+
+class EscalationCreate(EscalationSummary):
+    pass
+
+class Escalation(EscalationSummary):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    incident_id: str
+    ticket_id: Optional[str] = None
+    notifications_sent: bool = False
+    
+    class Config:
+        from_attributes = True
+
+# Enhanced Incident Model with new relationships
+class EnhancedIncident(IncidentBase):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    reported_at: datetime = Field(default_factory=datetime.utcnow)
+    status: str = "New"
+    assigned_to: str = ""
+    
+    # New relationships
+    log_files: List[LogFile] = []
+    email_source: Optional[EmailIncident] = None
+    tickets: List[Ticket] = []
+    escalations: List[Escalation] = []
+    
+    # AI Analysis results
+    ai_analysis: Optional[str] = None
+    resolution_plan: Optional[dict] = None
+    
+    class Config:
+        from_attributes = True
     
     class Config:
         from_attributes = True

@@ -135,3 +135,159 @@ class KnowledgeBase(Base):
             score += usage_bonus
         
         return min(score, 1.0)
+
+# Enhanced Database Models for New Features
+
+class Incident(Base):
+    """Enhanced incident model with full tracking capabilities"""
+    __tablename__ = "incidents"
+    
+    id = Column(String(255), primary_key=True)  # UUID string
+    description = Column(Text, nullable=False)
+    source = Column(String(50), default="Manual")  # Manual, Email, SMS, Call, System
+    priority = Column(String(20), default="Medium")  # Critical, High, Medium, Low
+    title = Column(String(500), default="")
+    category = Column(String(255), default="System Issue")
+    status = Column(String(50), default="New")  # New, In Progress, Resolved, Closed
+    assigned_to = Column(String(255), default="")
+    
+    # Timestamps
+    reported_at = Column(DateTime, default=datetime.utcnow)
+    resolved_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # AI Analysis Results
+    ai_analysis = Column(Text, default="")
+    resolution_plan_json = Column(Text, default="")
+    
+    @property
+    def resolution_plan(self) -> dict:
+        """Get resolution plan as dict"""
+        if not self.resolution_plan_json:
+            return {}
+        try:
+            return json.loads(self.resolution_plan_json)
+        except:
+            return {}
+    
+    @resolution_plan.setter
+    def resolution_plan(self, value: dict):
+        """Set resolution plan from dict"""
+        self.resolution_plan_json = json.dumps(value)
+
+class LogFile(Base):
+    """Log files attached to incidents"""
+    __tablename__ = "log_files"
+    
+    id = Column(String(255), primary_key=True)  # UUID string
+    incident_id = Column(String(255), nullable=True)  # Foreign key to incidents
+    filename = Column(String(500), nullable=False)
+    original_name = Column(String(500), nullable=False)
+    file_path = Column(String(1000), nullable=False)
+    file_size = Column(Integer, default=0)
+    content_type = Column(String(100), default="text/plain")
+    analysis_result = Column(Text, default="")
+    
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    processed_at = Column(DateTime, nullable=True)
+
+class EmailIncident(Base):
+    """Email-based incidents"""
+    __tablename__ = "email_incidents"
+    
+    id = Column(String(255), primary_key=True)  # UUID string
+    incident_id = Column(String(255), nullable=True)  # Foreign key to incidents
+    sender = Column(String(500), nullable=False)
+    subject = Column(String(1000), nullable=False)
+    email_content = Column(Text, nullable=False)
+    received_at = Column(DateTime, nullable=False)
+    processed_at = Column(DateTime, default=datetime.utcnow)
+    
+    classification = Column(String(50), default="Incident")  # Incident, Spam, Information
+    auto_created = Column(Integer, default=1)  # 0=No, 1=Yes
+    ai_extracted_data_json = Column(Text, default="")
+    
+    @property
+    def ai_extracted_data(self) -> dict:
+        """Get extracted data as dict"""
+        if not self.ai_extracted_data_json:
+            return {}
+        try:
+            return json.loads(self.ai_extracted_data_json)
+        except:
+            return {}
+    
+    @ai_extracted_data.setter
+    def ai_extracted_data(self, value: dict):
+        """Set extracted data from dict"""
+        self.ai_extracted_data_json = json.dumps(value)
+
+class Ticket(Base):
+    """Tickets created in external systems"""
+    __tablename__ = "tickets"
+    
+    id = Column(String(255), primary_key=True)  # UUID string
+    incident_id = Column(String(255), nullable=False)  # Foreign key to incidents
+    ticket_system = Column(String(50), nullable=False)  # Jira, ServiceNow, Internal
+    ticket_id = Column(String(255), nullable=False)  # External ticket ID
+    ticket_url = Column(String(1000), default="")
+    priority = Column(String(20), default="Medium")
+    status = Column(String(50), default="Open")
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    resolved_at = Column(DateTime, nullable=True)
+    
+    escalation_data_json = Column(Text, default="")
+    
+    @property
+    def escalation_data(self) -> dict:
+        """Get escalation data as dict"""
+        if not self.escalation_data_json:
+            return {}
+        try:
+            return json.loads(self.escalation_data_json)
+        except:
+            return {}
+    
+    @escalation_data.setter
+    def escalation_data(self, value: dict):
+        """Set escalation data from dict"""
+        self.escalation_data_json = json.dumps(value)
+
+class Escalation(Base):
+    """Escalation records for high-priority incidents"""
+    __tablename__ = "escalations"
+    
+    id = Column(String(255), primary_key=True)  # UUID string
+    incident_id = Column(String(255), nullable=False)  # Foreign key to incidents
+    ticket_id = Column(String(255), nullable=True)  # Foreign key to tickets
+    
+    executive_summary = Column(Text, nullable=False)
+    business_impact = Column(Text, nullable=False)
+    urgency_justification = Column(Text, nullable=False)
+    resource_requirements = Column(Text, nullable=False)
+    estimated_resolution_time = Column(String(100), nullable=False)
+    escalation_level = Column(String(20), default="Medium")  # Low, Medium, High, Critical
+    
+    stakeholder_notification_json = Column(Text, default="[]")
+    notifications_sent = Column(Integer, default=0)  # 0=No, 1=Yes
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    notified_at = Column(DateTime, nullable=True)
+    
+    @property
+    def stakeholder_notification(self) -> List[str]:
+        """Get stakeholder list"""
+        if not self.stakeholder_notification_json:
+            return []
+        try:
+            return json.loads(self.stakeholder_notification_json)
+        except:
+            return []
+    
+    @stakeholder_notification.setter
+    def stakeholder_notification(self, value: List[str]):
+        """Set stakeholder list"""
+        self.stakeholder_notification_json = json.dumps(value)
