@@ -215,6 +215,7 @@ async def analyze_post(
     try:
         # Validate incident input first
         validation_result = await validate_incident_input(incident_description)
+
         
         if not validation_result["valid"]:
             logger.warning(f"Invalid incident input rejected: {incident_description[:50]}...")
@@ -453,7 +454,7 @@ Environmental Impact: {environmental_impact}
         
     except Exception as ex:
         logger.error(f"Error analyzing incident: {ex}")
-        return RedirectResponse(url="/analyze?error=Analysis failed", status_code=302)
+        return RedirectResponse(url="/analyze?error=Analysis failed", status_code=302)        
 
 @app.get("/upload-knowledge")
 async def upload_knowledge_get(request: Request):

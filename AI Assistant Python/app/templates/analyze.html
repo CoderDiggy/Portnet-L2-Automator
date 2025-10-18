@@ -12,7 +12,6 @@
             </h2>
         </div>
         
-        <!-- Analysis Form -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
                 <h5 class="card-title mb-0">
@@ -119,16 +118,18 @@
                     </div>
                     
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">
+                        <button type="submit" class="btn btn-primary btn-lg" id="analyzeBtn">
                             <i class="fas fa-brain me-2"></i>
-                            Analyze Incident
+                            <span class="btn-text">Analyze Incident</span>
+                            <div class="spinner-border spinner-border-sm ms-2" role="status" style="display: none;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
                         </button>
                     </div>
                 </form>
             </div>
         </div>
         
-        <!-- Test Cases -->
         {% if test_cases %}
         <div class="card">
             <div class="card-header bg-light">
@@ -178,7 +179,6 @@
     </div>
 </div>
 
-<!-- Camera Modal -->
 <div class="modal fade" id="cameraModal" tabindex="-1" aria-labelledby="cameraModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -219,6 +219,22 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="invalidInputDialog" tabindex="-1" aria-labelledby="invalidInputDialogLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="invalidInputDialogLabel"><i class="fas fa-exclamation-triangle text-warning"></i> Invalid Input</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="invalidInputText">
+        </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -242,6 +258,16 @@ document.addEventListener('DOMContentLoaded', function() {
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
     });
+    
+    // --- START of the fix: Show invalid input modal ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get('error');
+    if (error) {
+        const modal = new bootstrap.Modal(document.getElementById('invalidInputDialog'));
+        document.getElementById('invalidInputText').innerText = error.replace(/\+/g, ' ');
+        modal.show();
+    }
+    // --- END of the fix ---
 });
 
 // Image preview functionality
@@ -494,5 +520,17 @@ function previewLogFile(index) {
     
     reader.readAsText(file);
 }
+
+// Loading state for analyze button
+document.querySelector('form').addEventListener('submit', function(e) {
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const spinner = analyzeBtn.querySelector('.spinner-border');
+    const btnText = analyzeBtn.querySelector('.btn-text');
+    
+    // Show loading state
+    analyzeBtn.disabled = true;
+    spinner.style.display = 'inline-block';
+    btnText.textContent = 'Analyzing...';
+});
 </script>
 {% endblock %}

@@ -28,6 +28,60 @@ class OpenAIService:
             logger.info("Azure OpenAI configuration complete. AI analysis enabled.")
             self.configured = True
     
+    # --- START of the new function ---
+    async def is_valid_incident_async(self, description: str) -> bool:
+        """
+        Uses AI to quickly classify if a description is a valid incident or not.
+        """
+        if not self.configured:
+            logger.warning("Using fallback validation - Azure OpenAI not configured properly")
+            # Basic keyword check as a fallback
+            return len(description.split()) > 2
+
+        try:
+            prompt = f"""
+            You are a validation bot. Your task is to classify the following text as either a "valid incident" or an "invalid prompt".
+            - A "valid incident" is a description of a technical or operational problem, like 'Vessel ETA is not updated' or 'Container information is duplicated'.
+            - An "invalid prompt" is a short, generic, or nonsensical input, like 'yes', 'hello', 'asdfghjkl', or a question that is not an incident description.
+
+            Text to classify: "{description}"
+
+            Classification (valid incident or invalid prompt):
+            """
+
+            request_body = {
+                "messages": [
+                    {"role": "system", "content": "You are a validation bot."},
+                    {"role": "user", "content": prompt}
+                ],
+                "max_tokens": 10,
+                "temperature": 0.0
+            }
+
+            headers = {
+                "api-key": self.api_key,
+                "Content-Type": "application/json"
+            }
+            
+            azure_url = f"{self.endpoint}/openai/deployments/{self.deployment_id}/chat/completions?api-version={self.api_version}"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(azure_url, json=request_body, headers=headers, timeout=15.0)
+
+                if response.is_success:
+                    response_data = response.json()
+                    classification = response_data.get("choices", [{}])[0].get("message", {}).get("content", "").lower()
+                    return "valid incident" in classification
+                else:
+                    logger.error(f"Validation API error: {response.status_code} - {response.text}")
+                    # Fallback to true to avoid blocking the user if the validation service fails
+                    return True
+        except Exception as ex:
+            logger.error(f"Error calling validation API: {ex}")
+            # Fallback to true to avoid blocking the user
+            return True
+    # --- END of the new function ---
+    
     async def analyze_image_async(self, image_base64: str, incident_description: str = "") -> str:
         """Analyze image using Azure OpenAI Vision API"""
         if not self.configured:
