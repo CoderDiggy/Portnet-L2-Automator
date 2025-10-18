@@ -6,6 +6,7 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/simple_main.py",
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "env": {
@@ -13,15 +14,16 @@
             },
             "args": [],
             "justMyCode": true,
-            "autoReload": {
-                "enable": true
-            }
+            "stopOnEntry": false,
+            "showReturnValue": true,
+            "subProcess": true
         },
         {
             "name": "🔧 Debug AI Assistant",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/simple_main.py",
+            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "env": {
@@ -29,7 +31,9 @@
             },
             "args": [],
             "justMyCode": false,
-            "stopOnEntry": false
+            "stopOnEntry": false,
+            "showReturnValue": true,
+            "subProcess": true
         }
     ]
 }
