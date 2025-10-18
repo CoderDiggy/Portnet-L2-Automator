@@ -1,0 +1,18 @@
+{
+    "python.defaultInterpreterPath": "./.venv/Scripts/python.exe",
+    "python.terminal.activateEnvironment": true,
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.formatting.provider": "black",
+    "files.exclude": {
+        "**/__pycache__": true,
+        "**/*.pyc": true,
+        ".venv": false,
+        "*.db": false
+    },
+    "terminal.integrated.cwd": "${workspaceFolder}",
+    "launch": {
+        "version": "0.2.0",
+        "configurations": []
+    }
+}

@@ -1,0 +1,35 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "🚀 Run AI Assistant Website",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/simple_main.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": true,
+            "autoReload": {
+                "enable": true
+            }
+        },
+        {
+            "name": "🔧 Debug AI Assistant",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/simple_main.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [],
+            "justMyCode": false,
+            "stopOnEntry": false
+        }
+    ]
+}
