@@ -6,7 +6,6 @@
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/simple_main.py",
-            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "env": {
@@ -20,10 +19,9 @@
         },
         {
             "name": "🔧 Debug AI Assistant",
-            "type": "debugpy",
+            "type": "debugpy", 
             "request": "launch",
             "program": "${workspaceFolder}/simple_main.py",
-            "python": "${workspaceFolder}/.venv/Scripts/python.exe",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}",
             "env": {
