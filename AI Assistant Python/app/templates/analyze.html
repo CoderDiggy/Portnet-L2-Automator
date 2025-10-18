@@ -76,9 +76,12 @@
                     </div>
                     
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">
+                        <button type="submit" class="btn btn-primary btn-lg" id="analyzeBtn">
                             <i class="fas fa-brain me-2"></i>
-                            Analyze Incident
+                            <span class="btn-text">Analyze Incident</span>
+                            <div class="spinner-border spinner-border-sm ms-2" role="status" style="display: none;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
                         </button>
                     </div>
                 </form>
@@ -365,6 +368,19 @@ function stopCamera() {
 // Clean up camera when modal is hidden
 document.getElementById('cameraModal').addEventListener('hidden.bs.modal', function() {
     stopCamera();
+});
+
+
+// Loading state for analyze button - ADD THIS NEW FUNCTION
+document.querySelector('form').addEventListener('submit', function(e) {
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const spinner = analyzeBtn.querySelector('.spinner-border');
+    const btnText = analyzeBtn.querySelector('.btn-text');
+    
+    // Show loading state
+    analyzeBtn.disabled = true;
+    spinner.style.display = 'inline-block';
+    btnText.textContent = 'Analyzing...';
 });
 </script>
 {% endblock %}
