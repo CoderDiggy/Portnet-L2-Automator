@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}AI Duty Officer Assistant - Home{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <!-- Hero Section -->
+        <div class="text-center mb-5">
+            <h1 class="display-4 fw-bold mb-3">
+                <i class="fas fa-robot text-primary"></i>
+                AI Duty Officer Assistant
+            </h1>
+            <p class="lead text-muted">
+                Intelligent Maritime Operations Analysis & Resolution Planning
+            </p>
+            <p class="mb-4">
+                Leverage AI-powered analysis with stored knowledge base to resolve incidents efficiently
+            </p>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                <a href="/analyze" class="btn btn-primary btn-lg me-md-2">
+                    <i class="fas fa-search me-2"></i>
+                    Analyze Incident
+                </a>
+                <a href="/api/knowledge" class="btn btn-outline-secondary btn-lg">
+                    <i class="fas fa-book me-2"></i>
+                    Knowledge Base
+                </a>
+            </div>
+        </div>
+        
+        <!-- Features -->
+        <div class="row g-4 mb-5">
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="bg-primary text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 60px; height: 60px;">
+                            <i class="fas fa-brain fa-lg"></i>
+                        </div>
+                        <h5 class="card-title">AI-Powered Analysis</h5>
+                        <p class="card-text text-muted">
+                            Advanced AI analysis using Azure OpenAI with maritime domain expertise
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="bg-success text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 60px; height: 60px;">
+                            <i class="fas fa-database fa-lg"></i>
+                        </div>
+                        <h5 class="card-title">Knowledge Integration</h5>
+                        <p class="card-text text-muted">
+                            Utilizes stored procedures and training data for contextual analysis
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-body text-center">
+                        <div class="bg-warning text-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 60px; height: 60px;">
+                            <i class="fas fa-cogs fa-lg"></i>
+                        </div>
+                        <h5 class="card-title">Auto Resolution</h5>
+                        <p class="card-text text-muted">
+                            Generates dynamic resolution plans based on incident analysis
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- System Status -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    System Capabilities
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-box text-info me-3 fa-lg"></i>
+                            <div>
+                                <div class="fw-bold">Container Management</div>
+                                <small class="text-muted">PORTNET® integration</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-ship text-primary me-3 fa-lg"></i>
+                            <div>
+                                <div class="fw-bold">Vessel Operations</div>
+                                <small class="text-muted">Maritime logistics</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-exchange-alt text-success me-3 fa-lg"></i>
+                            <div>
+                                <div class="fw-bold">EDI Processing</div>
+                                <small class="text-muted">Message handling</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-truck text-warning me-3 fa-lg"></i>
+                            <div>
+                                <div class="fw-bold">Terminal Operations</div>
+                                <small class="text-muted">Gate & logistics</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Start -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-rocket me-2"></i>
+                    Quick Start Guide
+                </h5>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0">
+                    <li class="mb-2">
+                        <strong>Describe the Incident:</strong> 
+                        Provide a clear description of the maritime operations issue
+                    </li>
+                    <li class="mb-2">
+                        <strong>AI Analysis:</strong> 
+                        System analyzes using stored knowledge and training data
+                    </li>
+                    <li class="mb-2">
+                        <strong>Review Results:</strong> 
+                        Get incident classification, root cause, and resolution plan
+                    </li>
+                    <li>
+                        <strong>Execute Plan:</strong> 
+                        Follow the generated steps to resolve the issue
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

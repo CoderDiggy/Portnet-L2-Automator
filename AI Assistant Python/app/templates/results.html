@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Analysis Results - AI Duty Officer Assistant{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <!-- Header -->
+        <div class="d-flex align-items-center justify-content-between mb-4">
+            <h2 class="fw-bold mb-0">
+                <i class="fas fa-chart-line text-success me-2"></i>
+                Analysis Results
+            </h2>
+            <a href="/analyze" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-1"></i>
+                Analyze Another
+            </a>
+        </div>
+        
+        <!-- Incident Information -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Incident Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h6 class="fw-bold">Description:</h6>
+                        <p class="mb-3">{{ result.incident.description }}</p>
+                        
+                        <div class="row g-2">
+                            <div class="col-sm-4">
+                                <strong>Source:</strong> {{ result.incident.source }}
+                            </div>
+                            <div class="col-sm-4">
+                                <strong>Status:</strong> 
+                                <span class="badge bg-info">{{ result.incident.status }}</span>
+                            </div>
+                            <div class="col-sm-4">
+                                <strong>Reported:</strong> {{ result.incident.reported_at.strftime('%Y-%m-%d %H:%M') }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="bg-light rounded p-3">
+                            <h6 class="fw-bold mb-2">Incident ID</h6>
+                            <code>{{ result.incident.id[:8] }}...</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- AI Analysis -->
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-brain me-2"></i>
+                    AI Analysis Results
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <h6 class="fw-bold text-primary">
+                                <i class="fas fa-tag me-1"></i>
+                                Incident Type
+                            </h6>
+                            <p class="mb-2">{{ result.analysis.incident_type }}</p>
+                            
+                            <h6 class="fw-bold text-primary mt-3">
+                                <i class="fas fa-search me-1"></i>
+                                Pattern Match
+                            </h6>
+                            <p class="mb-0">{{ result.analysis.pattern_match }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100">
+                            <h6 class="fw-bold text-warning">
+                                <i class="fas fa-exclamation-triangle me-1"></i>
+                                Urgency Level
+                            </h6>
+                            <p class="mb-2">
+                                <span class="badge 
+                                    {% if result.analysis.urgency == 'Critical' %}bg-danger
+                                    {% elif result.analysis.urgency == 'High' %}bg-warning
+                                    {% elif result.analysis.urgency == 'Medium' %}bg-primary
+                                    {% else %}bg-success{% endif %} fs-6">
+                                    {{ result.analysis.urgency }}
+                                </span>
+                            </p>
+                            
+                            <h6 class="fw-bold text-warning mt-3">
+                                <i class="fas fa-impact me-1"></i>
+                                Impact Assessment
+                            </h6>
+                            <p class="mb-0">{{ result.analysis.impact }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="border rounded p-3">
+                            <h6 class="fw-bold text-danger">
+                                <i class="fas fa-bug me-1"></i>
+                                Root Cause Analysis
+                            </h6>
+                            <p class="mb-3">{{ result.analysis.root_cause }}</p>
+                            
+                            {% if result.analysis.affected_systems %}
+                            <h6 class="fw-bold text-info">
+                                <i class="fas fa-server me-1"></i>
+                                Affected Systems
+                            </h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for system in result.analysis.affected_systems %}
+                                <span class="badge bg-info">{{ system }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Resolution Plan -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-tasks me-2"></i>
+                    Resolution Plan
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if result.resolution_plan.summary %}
+                <div class="alert alert-info">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    <strong>Summary:</strong> {{ result.resolution_plan.summary }}
+                </div>
+                {% endif %}
+                
+                {% if result.resolution_plan.steps %}
+                <h6 class="fw-bold mb-3">Resolution Steps:</h6>
+                <div class="list-group">
+                    {% for step in result.resolution_plan.steps %}
+                    <div class="list-group-item">
+                        <div class="d-flex align-items-start">
+                            <div class="me-3">
+                                <span class="badge bg-primary rounded-pill">{{ step.order }}</span>
+                            </div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    {% if step.type == 'Analysis' %}
+                                        <i class="fas fa-search text-info me-1"></i>
+                                    {% elif step.type == 'Investigation' %}
+                                        <i class="fas fa-microscope text-warning me-1"></i>
+                                    {% elif step.type == 'Resolution' %}
+                                        <i class="fas fa-wrench text-success me-1"></i>
+                                    {% else %}
+                                        <i class="fas fa-check text-primary me-1"></i>
+                                    {% endif %}
+                                    {{ step.description }}
+                                </h6>
+                                {% if step.query %}
+                                <div class="mt-2">
+                                    <small class="text-muted">Query:</small>
+                                    <code class="d-block bg-light p-2 rounded">{{ step.query }}</code>
+                                </div>
+                                {% endif %}
+                                <small class="text-muted">
+                                    <i class="fas fa-tag me-1"></i>{{ step.type }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-success">
+                        <i class="fas fa-check me-1"></i>
+                        Mark as Resolved
+                    </button>
+                    <button class="btn btn-info">
+                        <i class="fas fa-user me-1"></i>
+                        Assign to Technician
+                    </button>
+                    <button class="btn btn-warning">
+                        <i class="fas fa-clock me-1"></i>
+                        Schedule Follow-up
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="window.print()">
+                        <i class="fas fa-print me-1"></i>
+                        Print Report
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="exportResults()">
+                        <i class="fas fa-download me-1"></i>
+                        Export Results
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function exportResults() {
+    // Simple export functionality
+    const results = {
+        incident: {
+            id: "{{ result.incident.id }}",
+            description: "{{ result.incident.description|e }}",
+            source: "{{ result.incident.source }}",
+            reported_at: "{{ result.incident.reported_at.isoformat() }}"
+        },
+        analysis: {
+            incident_type: "{{ result.analysis.incident_type|e }}",
+            root_cause: "{{ result.analysis.root_cause|e }}",
+            urgency: "{{ result.analysis.urgency }}",
+            impact: "{{ result.analysis.impact|e }}",
+            affected_systems: [{% for system in result.analysis.affected_systems %}"{{ system|e }}"{% if not loop.last %},{% endif %}{% endfor %}]
+        },
+        resolution_plan: {
+            summary: "{{ result.resolution_plan.summary|e }}",
+            steps_count: {{ result.resolution_plan.steps|length }}
+        }
+    };
+    
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(results, null, 2));
+    const downloadElement = document.createElement('a');
+    downloadElement.setAttribute("href", dataStr);
+    downloadElement.setAttribute("download", "incident_analysis_{{ result.incident.id[:8] }}.json");
+    document.body.appendChild(downloadElement);
+    downloadElement.click();
+    downloadElement.remove();
+}
+</script>
+{% endblock %}

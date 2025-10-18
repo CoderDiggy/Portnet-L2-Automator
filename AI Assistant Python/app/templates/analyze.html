@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}Analyze Incident - AI Duty Officer Assistant{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="d-flex align-items-center mb-4">
+            <h2 class="fw-bold mb-0">
+                <i class="fas fa-search text-primary me-2"></i>
+                Incident Analysis
+            </h2>
+        </div>
+        
+        <!-- Analysis Form -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-edit me-2"></i>
+                    Describe the Incident
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="/analyze">
+                    <div class="mb-3">
+                        <label for="incidentDescription" class="form-label fw-bold">
+                            Incident Description <span class="text-danger">*</span>
+                        </label>
+                        <textarea 
+                            class="form-control" 
+                            id="incidentDescription" 
+                            name="incident_description"
+                            rows="4" 
+                            placeholder="Provide a detailed description of the maritime operations incident..."
+                            required>{% if preloaded_description %}{{ preloaded_description }}{% endif %}</textarea>
+                        <div class="form-text">
+                            <i class="fas fa-lightbulb text-warning me-1"></i>
+                            Include system names, error messages, container numbers, vessel details, or any relevant identifiers
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="incidentSource" class="form-label fw-bold">Source</label>
+                        <select class="form-select" id="incidentSource" name="incident_source">
+                            <option value="Manual" selected>Manual Entry</option>
+                            <option value="Email">Email</option>
+                            <option value="SMS">SMS</option>
+                            <option value="Call">Phone Call</option>
+                            <option value="System">System Alert</option>
+                        </select>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-brain me-2"></i>
+                            Analyze Incident
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Test Cases -->
+        {% if test_cases %}
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-vial me-2"></i>
+                    Sample Test Cases
+                    <small class="text-muted">(Click to analyze)</small>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for case in test_cases %}
+                    <div class="col-lg-6">
+                        <div class="card incident-card priority-{{ case.priority|lower }}" 
+                             onclick="loadTestCase('{{ case.description|e }}')">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start">
+                                    <div class="me-3">
+                                        <i class="{{ case.icon }} fa-lg text-primary"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="card-title fw-bold mb-1">{{ case.title }}</h6>
+                                        <p class="card-text small text-muted mb-2">{{ case.description }}</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="badge bg-secondary">{{ case.category }}</span>
+                                            <div>
+                                                <span class="badge bg-info me-1">{{ case.source }}</span>
+                                                <span class="badge 
+                                                    {% if case.priority == 'Critical' %}bg-danger
+                                                    {% elif case.priority == 'High' %}bg-warning
+                                                    {% elif case.priority == 'Medium' %}bg-primary
+                                                    {% else %}bg-success{% endif %}">
+                                                    {{ case.priority }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function loadTestCase(description) {
+    document.getElementById('incidentDescription').value = description;
+    document.getElementById('incidentDescription').focus();
+    
+    // Scroll to form
+    document.querySelector('.card').scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+    });
+}
+
+// Auto-resize textarea
+document.addEventListener('DOMContentLoaded', function() {
+    const textarea = document.getElementById('incidentDescription');
+    
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+});
+</script>
+{% endblock %}
