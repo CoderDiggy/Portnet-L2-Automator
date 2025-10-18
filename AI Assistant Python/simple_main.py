@@ -1,12 +1,15 @@
 from fastapi import FastAPI, Request, Form, Depends, UploadFile, File
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 import logging
 from datetime import datetime
 import uuid
 from dotenv import load_dotenv
 import pandas as pd
 import io
+from typing import List
+import base64
 
 # Load environment variables from .env file
 load_dotenv()
@@ -17,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(title="AI Duty Officer Assistant", version="1.0.0")
+
+# Setup static files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Setup templates with correct path
 import os
@@ -47,6 +53,22 @@ Base.metadata.create_all(bind=engine)
 
 # Initialize the OpenAI service
 openai_service = OpenAIService()
+
+async def analyze_image_with_ai(image_content: bytes, content_type: str) -> str:
+    """Analyze image using Azure OpenAI Vision API"""
+    try:
+        # Convert image to base64
+        import base64
+        encoded_image = base64.b64encode(image_content).decode('utf-8')
+        
+        # Use Azure OpenAI Vision to analyze the image
+        vision_analysis = await openai_service.analyze_image_async(encoded_image, "Maritime incident documentation")
+        
+        return f"Visual Analysis: {vision_analysis} "
+        
+    except Exception as ex:
+        logger.error(f"Error analyzing image: {ex}")
+        return "[Image analysis failed] "
 
 class MockResolutionStep:
     def __init__(self, order, description, step_type="Analysis"):
@@ -112,19 +134,59 @@ async def analyze_post(
     request: Request,
     incident_description: str = Form(...),
     incident_source: str = Form("Manual"),
+    incident_images: List[UploadFile] = File(default=[]),
     db: Session = Depends(get_db)
 ):
     """Analyze incident - POST"""
     try:
+        # Process uploaded images
+        image_analysis = ""
+        uploaded_images = []
+        
+        if incident_images and incident_images[0].filename:  # Check if actual files were uploaded
+            logger.info(f"Processing {len(incident_images)} uploaded images")
+            
+            # Create uploads directory if it doesn't exist
+            import os
+            uploads_dir = os.path.join(os.path.dirname(__file__), "static", "uploads")
+            os.makedirs(uploads_dir, exist_ok=True)
+            
+            for image in incident_images:
+                if image.filename and image.content_type.startswith('image/'):
+                    # Save image
+                    import uuid
+                    file_extension = os.path.splitext(image.filename)[1]
+                    unique_filename = f"{uuid.uuid4()}{file_extension}"
+                    file_path = os.path.join(uploads_dir, unique_filename)
+                    
+                    content = await image.read()
+                    with open(file_path, "wb") as f:
+                        f.write(content)
+                    
+                    uploaded_images.append({
+                        "filename": unique_filename,
+                        "original_name": image.filename,
+                        "path": f"/static/uploads/{unique_filename}",
+                        "size": len(content)
+                    })
+                    
+                    # Analyze image with AI vision (placeholder for now)
+                    image_analysis += await analyze_image_with_ai(content, image.content_type)
+        
+        # Combine text description with image analysis
+        combined_description = incident_description
+        if image_analysis:
+            combined_description += f"\n\nImage Analysis:\n{image_analysis}"
+        
         # Create mock incident
-        incident = MockIncident(incident_description, incident_source)
+        incident = MockIncident(combined_description, incident_source)
         
         # Use the full IncidentAnalyzer that includes knowledge base integration
         incident_analyzer = IncidentAnalyzer(db)
-        analysis = await incident_analyzer.analyze_incident_async(incident_description)
+        analysis = await incident_analyzer.analyze_incident_async(combined_description)
         
         # Generate AI-powered resolution plan
-        resolution_data = await openai_service.generate_resolution_plan_async(incident_description, analysis)
+        resolution_data = await openai_service.generate_resolution_plan_async(combined_description, analysis)
         
         # Convert to expected format
         class AIResolutionStep:
@@ -145,16 +207,18 @@ async def analyze_post(
         
         # Create mock view model
         class MockViewModel:
-            def __init__(self, incident, analysis, resolution_plan):
+            def __init__(self, incident, analysis, resolution_plan, uploaded_images=None):
                 self.incident = incident
                 self.analysis = analysis  
                 self.resolution_plan = resolution_plan
+                self.uploaded_images = uploaded_images or []
         
-        view_model = MockViewModel(incident, analysis, resolution_plan)
+        view_model = MockViewModel(incident, analysis, resolution_plan, uploaded_images)
         
         return templates.TemplateResponse("results.html", {
             "request": request,
-            "result": view_model
+            "result": view_model,
+            "uploaded_images": uploaded_images
         })
         
     except Exception as ex:
@@ -192,6 +256,25 @@ async def view_knowledge(request: Request, db: Session = Depends(get_db)):
             "request": request,
             "entries": [],
             "error": f"Error loading knowledge base: {str(ex)}"
+        })
+
+@app.get("/training")
+async def view_training(request: Request, db: Session = Depends(get_db)):
+    """View training data entries"""
+    try:
+        from app.models.database import TrainingData
+        training_data = db.query(TrainingData).order_by(TrainingData.created_at.desc()).all()
+        
+        return templates.TemplateResponse("training.html", {
+            "request": request,
+            "training_data": training_data
+        })
+    except Exception as ex:
+        logger.error(f"Error retrieving training data: {ex}")
+        return templates.TemplateResponse("training.html", {
+            "request": request,
+            "training_data": [],
+            "error": f"Error loading training data: {str(ex)}"
         })
 
 @app.get("/database-status")
@@ -469,10 +552,10 @@ async def upload_training_data(
         })
 
 @app.get("/view-training")
-async def view_training(request: Request, db: Session = Depends(get_db)):
+async def view_training_old(request: Request, db: Session = Depends(get_db)):
     """View training data"""
     try:
-        from app.models.schemas import TrainingData
+        from app.models.database import TrainingData
         training_data = db.query(TrainingData).order_by(TrainingData.created_at.desc()).limit(50).all()
         
         return templates.TemplateResponse("database_status.html", {
@@ -482,6 +565,54 @@ async def view_training(request: Request, db: Session = Depends(get_db)):
         })
     except Exception as ex:
         logger.error(f"Error retrieving training data: {ex}")
+        return {"error": str(ex)}
+
+@app.delete("/api/training/{training_id}")
+async def delete_training(training_id: int, db: Session = Depends(get_db)):
+    """Delete a training data entry"""
+    try:
+        from app.models.database import TrainingData
+        
+        # Find the training entry
+        training_entry = db.query(TrainingData).filter(TrainingData.id == training_id).first()
+        
+        if not training_entry:
+            return {"error": "Training data not found"}
+        
+        # Delete the entry
+        db.delete(training_entry)
+        db.commit()
+        
+        logger.info(f"Training data deleted: ID {training_id}")
+        return {"message": "Training data deleted successfully"}
+        
+    except Exception as ex:
+        logger.error(f"Error deleting training data: {ex}")
+        db.rollback()
+        return {"error": str(ex)}
+
+@app.delete("/api/knowledge/{knowledge_id}")
+async def delete_knowledge(knowledge_id: int, db: Session = Depends(get_db)):
+    """Delete a knowledge base entry"""
+    try:
+        from app.models.database import KnowledgeBase
+        
+        # Find the knowledge entry
+        knowledge_entry = db.query(KnowledgeBase).filter(KnowledgeBase.id == knowledge_id).first()
+        
+        if not knowledge_entry:
+            return {"error": "Knowledge entry not found"}
+        
+        # Delete the entry
+        db.delete(knowledge_entry)
+        db.commit()
+        
+        logger.info(f"Knowledge entry deleted: ID {knowledge_id}")
+        return {"message": "Knowledge entry deleted successfully"}
+        
+    except Exception as ex:
+        logger.error(f"Error deleting knowledge entry: {ex}")
+        db.rollback()
         return {"error": str(ex)}
 
 if __name__ == "__main__":

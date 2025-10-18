@@ -27,6 +27,73 @@ class OpenAIService:
         else:
             logger.info("Azure OpenAI configuration complete. AI analysis enabled.")
             self.configured = True
+    
+    async def analyze_image_async(self, image_base64: str, incident_description: str = "") -> str:
+        """Analyze image using Azure OpenAI Vision API"""
+        if not self.configured:
+            logger.warning("Using fallback image analysis - Azure OpenAI not configured")
+            return "[Image Analysis: Visual analysis shows maritime incident documentation. Azure OpenAI Vision would extract detailed incident information including equipment damage, operational issues, safety concerns, and environmental conditions visible in the image.]"
+        
+        try:
+            prompt = f"""You are an expert maritime operations analyst. Analyze this incident image and provide detailed observations.
+
+            Context: {incident_description if incident_description else 'Maritime incident analysis'}
+            
+            Please identify and describe:
+            1. Equipment or infrastructure visible
+            2. Any visible damage, issues, or anomalies
+            3. Safety concerns or hazards
+            4. Environmental conditions
+            5. Personnel or operational context
+            6. Specific maritime/port operations details
+            
+            Provide a concise but detailed analysis focusing on incident-relevant details."""
+
+            request_body = {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": prompt
+                            },
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{image_base64}"
+                                }
+                            }
+                        ]
+                    }
+                ],
+                "max_tokens": 500,
+                "temperature": 0.3
+            }
+            
+            headers = {
+                "api-key": self.api_key,
+                "Content-Type": "application/json"
+            }
+            
+            # Use Azure OpenAI endpoint with vision capabilities
+            azure_url = f"{self.endpoint}/openai/deployments/{self.deployment_id}/chat/completions?api-version={self.api_version}"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(azure_url, json=request_body, headers=headers, timeout=30.0)
+                
+                if response.is_success:
+                    response_data = response.json()
+                    vision_analysis = response_data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    logger.info(f"Vision analysis completed successfully")
+                    return vision_analysis
+                else:
+                    logger.error(f"Vision API error: {response.status_code} - {response.text}")
+                    return "[Image analysis failed - API error]"
+                    
+        except Exception as ex:
+            logger.error(f"Error in vision analysis: {ex}")
+            return "[Image analysis encountered an error]"
 
     async def analyze_incident_async(self, description: str, training_data: List[TrainingData] = None, knowledge_data: List[KnowledgeBase] = None) -> IncidentAnalysis:
         """Analyze incident using AI with training data and knowledge base context"""

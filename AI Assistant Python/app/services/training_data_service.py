@@ -75,6 +75,23 @@ class TrainingDataService:
         logger.info(f"Created training data with ID: {db_training.id}")
         return db_training
     
+    def add_training_example(self, incident_description: str, resolution_steps: str, source: str = "", category: str = "") -> TrainingData:
+        """Add a training example with simple parameters"""
+        db_training = TrainingData(
+            incident_description=incident_description,
+            expected_root_cause=resolution_steps,  # Store resolution steps in root cause field
+            category=category,
+            created_by=source,
+            is_validated=1  # Auto-validate imported data
+        )
+        
+        self.db.add(db_training)
+        self.db.commit()
+        self.db.refresh(db_training)
+        
+        logger.info(f"Added training example with ID: {db_training.id}")
+        return db_training
+
     def update_training_data(self, training_id: int, training_update: TrainingDataUpdate) -> Optional[TrainingData]:
         """Update existing training data"""
         db_training = self.get_training_data_by_id(training_id)

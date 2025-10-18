@@ -21,7 +21,7 @@
                 </h5>
             </div>
             <div class="card-body">
-                <form method="post" action="/analyze">
+                <form method="post" action="/analyze" enctype="multipart/form-data">
                     <div class="mb-3">
                         <label for="incidentDescription" class="form-label fw-bold">
                             Incident Description <span class="text-danger">*</span>
@@ -37,6 +37,31 @@
                             <i class="fas fa-lightbulb text-warning me-1"></i>
                             Include system names, error messages, container numbers, vessel details, or any relevant identifiers
                         </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="incidentImages" class="form-label fw-bold">
+                            <i class="fas fa-camera me-1"></i>
+                            Incident Images <span class="text-muted">(Optional)</span>
+                        </label>
+                        <input 
+                            class="form-control" 
+                            type="file" 
+                            id="incidentImages" 
+                            name="incident_images"
+                            accept="image/*"
+                            multiple>
+                        <div class="mt-2">
+                            <button type="button" class="btn btn-outline-primary" id="openCameraBtn">
+                                <i class="fas fa-video me-1"></i>
+                                Take Photo with Camera
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle text-info me-1"></i>
+                            Upload photos or take pictures directly with your camera for AI visual analysis. Supported formats: JPG, PNG, GIF, WebP
+                        </div>
+                        <div id="imagePreview" class="mt-2 row g-2"></div>
                     </div>
                     
                     <div class="mb-3">
@@ -109,6 +134,48 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Camera Modal -->
+<div class="modal fade" id="cameraModal" tabindex="-1" aria-labelledby="cameraModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cameraModalLabel">
+                    <i class="fas fa-camera me-2"></i>
+                    Take Incident Photo
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="cameraContainer" style="display: none;">
+                    <video id="cameraVideo" autoplay muted playsinline style="max-width: 100%; max-height: 400px; border-radius: 8px;"></video>
+                    <canvas id="photoCanvas" style="display: none;"></canvas>
+                </div>
+                <div id="cameraError" class="alert alert-warning" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="errorMessage">Camera access is required to take photos.</span>
+                </div>
+                <div id="cameraLoading" class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading camera...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Requesting camera access...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="capturePhotoBtn" style="display: none;">
+                    <i class="fas fa-camera me-1"></i>
+                    Capture Photo
+                </button>
+                <button type="button" class="btn btn-primary" id="retakePhotoBtn" style="display: none;">
+                    <i class="fas fa-redo me-1"></i>
+                    Take Another
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -132,6 +199,172 @@ document.addEventListener('DOMContentLoaded', function() {
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
     });
+});
+
+// Image preview functionality
+document.getElementById('incidentImages').addEventListener('change', function(e) {
+    const files = e.target.files;
+    const preview = document.getElementById('imagePreview');
+    preview.innerHTML = '';
+    
+    if (files.length > 0) {
+        Array.from(files).forEach((file, index) => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-3 col-sm-4 col-6';
+                    
+                    col.innerHTML = `
+                        <div class="card">
+                            <img src="${e.target.result}" class="card-img-top" style="height: 120px; object-fit: cover;" alt="Preview ${index + 1}">
+                            <div class="card-body p-2">
+                                <small class="text-muted">${file.name}</small>
+                                <br>
+                                <small class="text-info">${(file.size / 1024).toFixed(1)} KB</small>
+                            </div>
+                        </div>
+                    `;
+                    
+                    preview.appendChild(col);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+});
+
+// Camera functionality
+let currentStream = null;
+let capturedPhotos = [];
+
+document.getElementById('openCameraBtn').addEventListener('click', function() {
+    const modal = new bootstrap.Modal(document.getElementById('cameraModal'));
+    modal.show();
+    openCamera();
+});
+
+async function openCamera() {
+    const video = document.getElementById('cameraVideo');
+    const container = document.getElementById('cameraContainer');
+    const loading = document.getElementById('cameraLoading');
+    const error = document.getElementById('cameraError');
+    const captureBtn = document.getElementById('capturePhotoBtn');
+    
+    try {
+        // Reset UI
+        container.style.display = 'none';
+        error.style.display = 'none';
+        loading.style.display = 'block';
+        captureBtn.style.display = 'none';
+        
+        // Request camera access
+        currentStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: 'environment' // Try to use back camera on mobile
+            } 
+        });
+        
+        video.srcObject = currentStream;
+        
+        video.onloadedmetadata = function() {
+            loading.style.display = 'none';
+            container.style.display = 'block';
+            captureBtn.style.display = 'inline-block';
+        };
+        
+    } catch (err) {
+        console.error('Camera access error:', err);
+        loading.style.display = 'none';
+        error.style.display = 'block';
+        
+        let errorMsg = 'Camera access denied or not available.';
+        if (err.name === 'NotAllowedError') {
+            errorMsg = 'Camera permission denied. Please allow camera access and try again.';
+        } else if (err.name === 'NotFoundError') {
+            errorMsg = 'No camera found on this device.';
+        } else if (err.name === 'NotSupportedError') {
+            errorMsg = 'Camera not supported on this browser.';
+        }
+        
+        document.getElementById('errorMessage').textContent = errorMsg;
+    }
+}
+
+document.getElementById('capturePhotoBtn').addEventListener('click', function() {
+    capturePhoto();
+});
+
+document.getElementById('retakePhotoBtn').addEventListener('click', function() {
+    openCamera();
+});
+
+function capturePhoto() {
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.getElementById('photoCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas size to video size
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    // Draw video frame to canvas
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Convert to blob
+    canvas.toBlob(function(blob) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `camera-capture-${timestamp}.jpg`;
+        
+        // Create file object
+        const file = new File([blob], filename, { type: 'image/jpeg' });
+        
+        // Add to captured photos
+        capturedPhotos.push(file);
+        
+        // Add to file input
+        addCapturedPhotoToInput(file);
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('cameraModal'));
+        modal.hide();
+        
+        // Stop camera
+        stopCamera();
+        
+    }, 'image/jpeg', 0.8);
+}
+
+function addCapturedPhotoToInput(file) {
+    // Create a new FileList with existing files plus captured photo
+    const input = document.getElementById('incidentImages');
+    const dt = new DataTransfer();
+    
+    // Add existing files
+    for (let i = 0; i < input.files.length; i++) {
+        dt.items.add(input.files[i]);
+    }
+    
+    // Add captured photo
+    dt.items.add(file);
+    
+    // Update input
+    input.files = dt.files;
+    
+    // Trigger change event to update preview
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+function stopCamera() {
+    if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+        currentStream = null;
+    }
+}
+
+// Clean up camera when modal is hidden
+document.getElementById('cameraModal').addEventListener('hidden.bs.modal', function() {
+    stopCamera();
 });
 </script>
 {% endblock %}

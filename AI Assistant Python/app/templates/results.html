@@ -31,6 +31,24 @@
                         <h6 class="fw-bold">Description:</h6>
                         <p class="mb-3">{{ result.incident.description }}</p>
                         
+                        {% if uploaded_images %}
+                        <h6 class="fw-bold">Incident Images:</h6>
+                        <div class="row g-2 mb-3">
+                            {% for image in uploaded_images %}
+                            <div class="col-md-3 col-sm-4 col-6">
+                                <div class="card">
+                                    <img src="{{ image.path }}" class="card-img-top" style="height: 120px; object-fit: cover;" alt="{{ image.original_name }}">
+                                    <div class="card-body p-2">
+                                        <small class="text-muted">{{ image.original_name }}</small>
+                                        <br>
+                                        <small class="text-info">{{ (image.size / 1024) | round(1) }} KB</small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                        
                         <div class="row g-2">
                             <div class="col-sm-4">
                                 <strong>Source:</strong> {{ result.incident.source }}
