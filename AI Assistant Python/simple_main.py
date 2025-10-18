@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, Depends
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, RedirectResponse
 import logging
@@ -31,8 +31,16 @@ class MockIncident:
         self.reported_at = datetime.now()
         self.status = "New"
 
-# Import the real OpenAI service
+# Import the real services
 from app.services.openai_service import OpenAIService
+from app.services.knowledge_base_service import KnowledgeBaseService
+from app.services.incident_analyzer import IncidentAnalyzer
+from app.models.database import Base
+from app.database import get_db, engine
+from sqlalchemy.orm import Session
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 # Initialize the OpenAI service
 openai_service = OpenAIService()
@@ -100,15 +108,17 @@ async def analyze_get(request: Request):
 async def analyze_post(
     request: Request,
     incident_description: str = Form(...),
-    incident_source: str = Form("Manual")
+    incident_source: str = Form("Manual"),
+    db: Session = Depends(get_db)
 ):
     """Analyze incident - POST"""
     try:
         # Create mock incident
         incident = MockIncident(incident_description, incident_source)
         
-        # Use real AI analysis instead of mock
-        analysis = await openai_service.analyze_incident_async(incident_description)
+        # Use the full IncidentAnalyzer that includes knowledge base integration
+        incident_analyzer = IncidentAnalyzer(db)
+        analysis = await incident_analyzer.analyze_incident_async(incident_description)
         
         # Generate AI-powered resolution plan
         resolution_data = await openai_service.generate_resolution_plan_async(incident_description, analysis)
@@ -157,6 +167,66 @@ async def test_case(request: Request, description: str = ""):
         "preloaded_description": description
     })
 
+@app.get("/upload-knowledge")
+async def upload_knowledge_get(request: Request):
+    """Knowledge upload page"""
+    return templates.TemplateResponse("upload_knowledge.html", {"request": request})
+
+@app.get("/knowledge")
+async def view_knowledge(request: Request, db: Session = Depends(get_db)):
+    """View knowledge base entries"""
+    try:
+        knowledge_service = KnowledgeBaseService(db)
+        entries = knowledge_service.get_all_knowledge(skip=0, limit=100)
+        
+        return templates.TemplateResponse("knowledge_list.html", {
+            "request": request,
+            "entries": entries
+        })
+    except Exception as ex:
+        logger.error(f"Error retrieving knowledge: {ex}")
+        return templates.TemplateResponse("knowledge_list.html", {
+            "request": request,
+            "entries": [],
+            "error": f"Error loading knowledge base: {str(ex)}"
+        })
+
+@app.post("/upload-knowledge")
+async def upload_knowledge_post(
+    request: Request, 
+    title: str = Form(...), 
+    category: str = Form(""), 
+    content: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Handle knowledge upload"""
+    try:
+        # Use the real knowledge base service
+        knowledge_service = KnowledgeBaseService(db)
+        result = knowledge_service.import_from_word_content(
+            content=content,
+            title=title,
+            category=category if category else "General",
+            source="Web Upload"
+        )
+        
+        logger.info(f"Knowledge uploaded successfully: {title} (ID: {result.id})")
+        
+        # Return success response
+        return templates.TemplateResponse("upload_knowledge.html", {
+            "request": request,
+            "success": True,
+            "message": f"Knowledge document '{title}' uploaded successfully! (ID: {result.id})"
+        })
+        
+    except Exception as ex:
+        logger.error(f"Error uploading knowledge: {ex}")
+        return templates.TemplateResponse("upload_knowledge.html", {
+            "request": request,
+            "error": True,
+            "message": f"Error uploading document: {str(ex)}"
+        })
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8002)

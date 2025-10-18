@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Knowledge Base{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>
+                    <i class="fas fa-book me-2"></i>Knowledge Base
+                </h2>
+                <a href="/upload-knowledge" class="btn btn-primary">
+                    <i class="fas fa-plus me-1"></i>Add Knowledge
+                </a>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+            </div>
+            {% endif %}
+
+            {% if entries %}
+            <div class="row">
+                {% for entry in entries %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-start">
+                            <h6 class="card-title mb-0 flex-grow-1">{{ entry.title }}</h6>
+                            {% if entry.category %}
+                            <span class="badge bg-secondary ms-2">{{ entry.category }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">{{ entry.content[:200] }}{% if entry.content|length > 200 %}...{% endif %}</p>
+                            
+                            {% if entry.keywords %}
+                            <div class="mb-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-tags me-1"></i>Keywords:
+                                </small>
+                                <br>
+                                {% for keyword in entry.keywords.split(',')[:5] %}
+                                <span class="badge bg-light text-dark me-1">{{ keyword.strip() }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer text-muted">
+                            <small>
+                                <i class="fas fa-calendar me-1"></i>
+                                Added: {{ entry.created_at.strftime('%Y-%m-%d %H:%M') if entry.created_at else 'Unknown' }}
+                            </small>
+                            <br>
+                            <small>
+                                <i class="fas fa-source me-1"></i>
+                                Source: {{ entry.source or 'Manual' }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="mt-4">
+                <div class="alert alert-info">
+                    <h6 class="alert-heading">
+                        <i class="fas fa-info-circle me-1"></i>How Knowledge Base Works
+                    </h6>
+                    <p class="mb-0">
+                        The AI assistant automatically references these knowledge entries when analyzing incidents. 
+                        It matches incident descriptions to relevant procedures and incorporates them into resolution plans.
+                        <strong>Total entries: {{ entries|length }}</strong>
+                    </p>
+                </div>
+            </div>
+            
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-book-open fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">No Knowledge Entries Found</h4>
+                <p class="text-muted mb-4">Upload your first knowledge document to get started.</p>
+                <a href="/upload-knowledge" class="btn btn-primary btn-lg">
+                    <i class="fas fa-upload me-2"></i>Upload Knowledge Document
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
