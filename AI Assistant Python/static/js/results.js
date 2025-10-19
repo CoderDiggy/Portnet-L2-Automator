@@ -14,7 +14,7 @@ function exportResults() {
             urgency: document.querySelector('.urgency-badge')?.textContent.trim(),
             impact: document.querySelectorAll('.analysis-value')[2]?.textContent.trim(),
             root_cause: document.querySelectorAll('.analysis-value')[3]?.textContent.trim(),
-            affected_systems: Array.from(document.querySelectorAll('.system-tag')).map(el => el.textContent.trim())
+            affected_systems: Array.from(document.querySelectorAll('.system-tag')).map(el => el.textContent.trim().replace(/\s\s+/g, ' ').trim())
         },
         resolution_plan: {
             summary: document.querySelector('.summary-box p')?.textContent.trim(),
@@ -25,6 +25,7 @@ function exportResults() {
                 query: item.querySelector('.query-box code')?.textContent.trim() || null
             }))
         },
+        escalation_summary: document.getElementById('escalationSummaryText').innerText.trim(),
         exported_at: new Date().toISOString()
     };
     
@@ -40,13 +41,41 @@ function exportResults() {
     showToast('Results exported successfully!', 'success');
 }
 
+// Copy Escalation Summary to Clipboard
+function copySummaryToClipboard() {
+    const summaryText = document.getElementById('escalationSummaryText').innerText;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(summaryText).then(() => {
+            showToast('Escalation summary copied to clipboard!', 'success');
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            showToast('Failed to copy summary.', 'danger');
+        });
+    } else {
+        // Fallback for older browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = summaryText;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showToast('Escalation summary copied to clipboard!', 'success');
+        } catch (err) {
+            console.error('Fallback copy failed: ', err);
+            showToast('Failed to copy summary.', 'danger');
+        }
+        document.body.removeChild(textArea);
+    }
+}
+
 // Toast Notification
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `alert alert-${type} position-fixed top-0 end-0 m-3 shadow-lg`;
     toast.style.zIndex = '9999';
     toast.innerHTML = `
-        <i class="fas fa-check-circle me-2"></i>
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
         ${message}
     `;
     document.body.appendChild(toast);
@@ -58,7 +87,7 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// Smooth Scroll Animation
+// Smooth Scroll Animation on Load
 document.addEventListener('DOMContentLoaded', function() {
     const cards = document.querySelectorAll('.results-card');
     
@@ -81,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-// Copy Incident ID to Clipboard
+// Copy Incident ID to Clipboard functionality
 document.addEventListener('DOMContentLoaded', function() {
     const codeElements = document.querySelectorAll('code');
     codeElements.forEach(code => {
@@ -94,3 +123,4 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+

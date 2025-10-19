@@ -247,6 +247,26 @@
                     </div>
                 </div>
                 
+                <!-- Escalation Summary Card -->
+                <div class="card results-card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-gradient-danger text-white border-0 py-3">
+                        <h5 class="card-title mb-0 fw-bold">
+                            <i class="fas fa-arrow-up-right-from-square me-2"></i>
+                            Escalation Summary
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <div class="escalation-summary-box">
+                            <p id="escalationSummaryText" class="mb-3">
+                                {{ result.analysis.escalation_summary or "No escalation summary was generated." }}
+                            </p>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="copySummaryToClipboard()">
+                                <i class="fas fa-copy me-2"></i>Copy to Clipboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Resolution Plan -->
                 <div class="card results-card border-0 shadow-sm mb-4">
                     <div class="card-header bg-gradient-warning text-dark border-0 py-3">
@@ -345,3 +365,4 @@
 {% block extra_js %}
 <script src="/static/js/results.js"></script>
 {% endblock %}
+
