@@ -15,6 +15,7 @@ class IncidentAnalyzer:
         self.training_service = TrainingDataService(db)
         self.knowledge_service = KnowledgeBaseService(db)
     
+    # This function is now correctly indented to be part of the class
     async def analyze_incident_async(self, description: str) -> IncidentAnalysis:
         """
         Analyze incident using AI with training data and knowledge base context
@@ -31,12 +32,15 @@ class IncidentAnalyzer:
             # Use OpenAI service for analysis
             analysis = await self.openai_service.analyze_incident_async(description, training_examples, knowledge_entries)
             
-            logger.info(f"Analysis completed. Type: {analysis.incident_type}, Urgency: {analysis.urgency}")
+            # Generate escalation summary
+            analysis.escalation_summary = await self.openai_service.generate_escalation_summary_async(analysis)
+            
+            logger.info(f"Analysis and escalation summary completed. Type: {analysis.incident_type}, Urgency: {analysis.urgency}")
             
             return analysis
             
         except Exception as ex:
-            logger.error(f"Error analyzing incident: {ex}")
+            logger.error(f"Error analyzing incident: {ex}", exc_info=True)
             # Return fallback analysis
             return IncidentAnalysis(
                 incident_type="System Issue",
@@ -44,5 +48,6 @@ class IncidentAnalyzer:
                 root_cause="Analysis failed - requires manual investigation",
                 impact="Unknown - manual assessment required",
                 urgency="Medium",
-                affected_systems=["Unknown"]
+                affected_systems=["Unknown"],
+                escalation_summary="AI analysis failed. Please review the incident manually for escalation."
             )

@@ -1,0 +1,463 @@
+/* ========================================
+   TRAINING DATA PAGE STYLES
+   ======================================== */
+
+/* Header Section */
+.training-header-section {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    padding: 2rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.training-header-section h2 {
+    color: white;
+}
+
+.training-header-section p {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* ========================================
+   STAT CARDS
+   ======================================== */
+.stat-card-td {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 2px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.3s ease;
+}
+
+.stat-card-td:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+    border-color: #11998e;
+}
+
+.stat-icon-td {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    flex-shrink: 0;
+}
+
+.stat-content-td {
+    flex: 1;
+}
+
+.stat-number-td {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #212529;
+    margin: 0;
+    line-height: 1;
+}
+
+.stat-label-td {
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin: 0;
+}
+
+/* ========================================
+   SEARCH BOX
+   ======================================== */
+.search-box {
+    position: relative;
+}
+
+.search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    z-index: 10;
+}
+
+.search-box input {
+    padding-left: 3rem;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.search-box input:focus {
+    border-color: #11998e;
+    box-shadow: 0 0 0 0.2rem rgba(17, 153, 142, 0.15);
+}
+
+/* ========================================
+   FILTER DROPDOWN WITH PROPER SPACING
+   ======================================== */
+.td-filter-dropdown {
+    width: 340px;
+    max-height: 70vh;
+    padding: 0;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    overflow: hidden;
+    z-index: 9999;
+    margin-top: 0.75rem !important; /* Space from button */
+}
+
+.filter-header {
+    padding: 1.25rem 1.5rem; /* Space from edges */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+    border-bottom: 2px solid #e9ecef;
+}
+
+.filter-header h6 {
+    font-weight: 700;
+    color: #212529;
+    margin: 0;
+}
+
+.filter-body {
+    max-height: calc(70vh - 140px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0.5rem 0; /* Top/bottom padding */
+}
+
+.filter-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.filter-body::-webkit-scrollbar-track {
+    background: #f8f9fa;
+}
+
+.filter-body::-webkit-scrollbar-thumb {
+    background: #11998e;
+    border-radius: 10px;
+}
+
+.filter-body::-webkit-scrollbar-thumb:hover {
+    background: #0d7a72;
+}
+
+.filter-section {
+    padding: 1rem 1.5rem; /* Space from edges */
+}
+
+.filter-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #495057;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-footer {
+    padding: 1.25rem 1.5rem; /* Space from edges */
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+}
+
+/* Form Check Spacing */
+.filter-section .form-check {
+    margin-bottom: 0.5rem;
+    padding-left: 1.75rem;
+}
+
+.filter-section .form-check:last-child {
+    margin-bottom: 0;
+}
+
+/* ========================================
+   ROTATING ARROW
+   ======================================== */
+.filter-arrow {
+    display: inline-block;
+    transition: transform 0.3s ease;
+    margin-left: 0.5rem;
+    font-size: 0.75rem;
+}
+
+.dropdown.show .filter-arrow {
+    transform: rotate(180deg);
+}
+
+/* Hide Bootstrap's default arrow */
+.btn.dropdown-toggle::after {
+    display: none;
+}
+
+/* Filter Count Badge */
+.filter-count {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* ========================================
+   TRAINING CARDS
+   ======================================== */
+.training-card {
+    border-radius: 16px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.training-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.15) !important;
+}
+
+.card-header-td {
+    background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+    border-bottom: 2px solid #e9ecef;
+    padding: 1.25rem 1.5rem;
+}
+
+.card-title-td {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #212529;
+    margin: 0;
+}
+
+.category-badge-td {
+    display: inline-block;
+    background: rgba(17, 153, 142, 0.1);
+    color: #11998e;
+    padding: 0.35rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.urgency-badge-card {
+    padding: 0.35rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.urgency-critical {
+    background: #dc3545;
+    color: white;
+}
+
+.urgency-high {
+    background: #ffc107;
+    color: #000;
+}
+
+.urgency-medium {
+    background: #0dcaf0;
+    color: #000;
+}
+
+.urgency-low {
+    background: #28a745;
+    color: white;
+}
+
+.urgency-none {
+    background: #6c757d;
+    color: white;
+}
+
+.section-title {
+    font-size: 0.875rem;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.card-text-td {
+    color: #495057;
+    line-height: 1.6;
+    margin-bottom: 0;
+}
+
+.metadata-section {
+    padding-top: 0.75rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.metadata-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.metadata-label {
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.badge-sm {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.7rem;
+}
+
+.card-footer-td {
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    padding: 1rem 1.5rem;
+}
+
+.meta-info-td {
+    flex: 1;
+}
+
+/* ========================================
+   INFO BOX
+   ======================================== */
+.info-box-td {
+    background: linear-gradient(135deg, rgba(17, 153, 142, 0.05) 0%, rgba(56, 239, 125, 0.05) 100%);
+    border: 2px solid #e9ecef;
+    border-radius: 16px;
+    padding: 2rem;
+}
+
+.total-count-badge {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    background: white;
+    padding: 1.5rem 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.count-number {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #11998e;
+    line-height: 1;
+}
+
+.count-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 0.5rem;
+}
+
+/* ========================================
+   EMPTY STATE
+   ======================================== */
+.empty-state {
+    background: linear-gradient(135deg, rgba(17, 153, 142, 0.05) 0%, rgba(56, 239, 125, 0.05) 100%);
+    border: 2px dashed #dee2e6;
+    border-radius: 16px;
+    padding: 4rem 2rem;
+    text-align: center;
+}
+
+.empty-state-content {
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.empty-state-icon {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 1.5rem;
+    border-radius: 50%;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.5rem;
+    color: #11998e;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+}
+
+/* ========================================
+   MODAL CUSTOMIZATION
+   ======================================== */
+.modal-content {
+    border-radius: 16px;
+}
+
+.modal-header.bg-danger-subtle {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.1) 0%, rgba(220, 53, 69, 0.05) 100%) !important;
+}
+
+/* ========================================
+   SHADOW HOVER EFFECT
+   ======================================== */
+.shadow-hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.shadow-hover:hover {
+    box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+@media (max-width: 768px) {
+    .stat-card-td {
+        padding: 1rem;
+    }
+    
+    .stat-icon-td {
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+    }
+    
+    .stat-number-td {
+        font-size: 1.5rem;
+    }
+    
+    .td-filter-dropdown {
+        width: 300px;
+        max-height: 60vh;
+    }
+    
+    .filter-body {
+        max-height: calc(60vh - 140px);
+    }
+    
+    .training-header-section {
+        padding: 1.5rem 0;
+    }
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+.training-card {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+.training-card:nth-child(1) { animation-delay: 0.05s; }
+.training-card:nth-child(2) { animation-delay: 0.1s; }
+.training-card:nth-child(3) { animation-delay: 0.15s; }
+.training-card:nth-child(4) { animation-delay: 0.2s; }
+.training-card:nth-child(5) { animation-delay: 0.25s; }
+.training-card:nth-child(6) { animation-delay: 0.3s; }

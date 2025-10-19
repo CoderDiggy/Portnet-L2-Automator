@@ -32,6 +32,8 @@ class IncidentAnalysis(BaseModel):
     impact: str = ""
     urgency: str = "Medium"
     affected_systems: List[str] = []
+    key_log_entries: List[str] = Field(default_factory=list)
+    escalation_summary: str = ""
     
     class Config:
         from_attributes = True

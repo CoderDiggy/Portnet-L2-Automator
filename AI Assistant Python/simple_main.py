@@ -10,6 +10,7 @@ import pandas as pd
 import io
 from typing import List
 import base64
+import os
 
 # Load environment variables from .env file
 load_dotenv()
@@ -21,12 +22,14 @@ logger = logging.getLogger(__name__)
 # Create FastAPI app
 app = FastAPI(title="AI Duty Officer Assistant", version="1.0.0")
 
-# Setup static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Resolve paths relative to this file
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Setup static files with absolute path to avoid CWD issues
+static_dir = os.path.join(script_dir, "static")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # Setup templates with correct path
-import os
-script_dir = os.path.dirname(os.path.abspath(__file__))
 templates_dir = os.path.join(script_dir, "app", "templates")
 templates = Jinja2Templates(directory=templates_dir)
 
@@ -215,6 +218,7 @@ async def analyze_post(
     try:
         # Validate incident input first
         validation_result = await validate_incident_input(incident_description)
+
         
         if not validation_result["valid"]:
             logger.warning(f"Invalid incident input rejected: {incident_description[:50]}...")
@@ -453,7 +457,7 @@ Environmental Impact: {environmental_impact}
         
     except Exception as ex:
         logger.error(f"Error analyzing incident: {ex}")
-        return RedirectResponse(url="/analyze?error=Analysis failed", status_code=302)
+        return RedirectResponse(url="/analyze?error=Analysis failed", status_code=302)        
 
 @app.get("/upload-knowledge")
 async def upload_knowledge_get(request: Request):
@@ -1177,14 +1181,14 @@ async def debug_document_content(
         
         elif document_file.filename.lower().endswith(('.txt', '.pdf')):
             # Use document parser service for other formats
-            extracted_text = await document_parser_service._extract_from_pdf(file_content) if document_file.filename.lower().endswith('.pdf') else file_content.decode('utf-8')
+            extracted_text = await document_parser._extract_from_pdf(file_content) if document_file.filename.lower().endswith('.pdf') else file_content.decode('utf-8')
             content_parts = [{"type": "text", "text": extracted_text}]
         
         else:
             return {"status": "error", "error": "Supported formats: .docx, .pdf, .txt"}
         
         # Use AI analysis from document parser service
-        structure_analysis = document_parser_service.analyze_document_structure(extracted_text)
+        structure_analysis = document_parser.analyze_document_structure(extracted_text)
         
         return {
             "status": "success",
@@ -1221,4 +1225,4 @@ async def debug_document_content(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="localhost", port=8001)

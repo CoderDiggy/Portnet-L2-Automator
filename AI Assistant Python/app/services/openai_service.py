@@ -28,6 +28,58 @@ class OpenAIService:
             logger.info("Azure OpenAI configuration complete. AI analysis enabled.")
             self.configured = True
     
+    async def is_valid_incident_async(self, description: str) -> bool:
+        """
+        Uses AI to quickly classify if a description is a valid incident or not.
+        """
+        if not self.configured:
+            logger.warning("Using fallback validation - Azure OpenAI not configured properly")
+            # Basic keyword check as a fallback
+            return len(description.split()) > 2
+
+        try:
+            prompt = f"""
+            You are a validation bot. Your task is to classify the following text as either a "valid incident" or an "invalid prompt".
+            - A "valid incident" is a description of a technical or operational problem, like 'Vessel ETA is not updated' or 'Container information is duplicated'.
+            - An "invalid prompt" is a short, generic, or nonsensical input, like 'yes', 'hello', 'asdfghjkl', or a question that is not an incident description.
+
+            Text to classify: "{description}"
+
+            Classification (valid incident or invalid prompt):
+            """
+
+            request_body = {
+                "messages": [
+                    {"role": "system", "content": "You are a validation bot."},
+                    {"role": "user", "content": prompt}
+                ],
+                "max_tokens": 10,
+                "temperature": 0.0
+            }
+
+            headers = {
+                "api-key": self.api_key,
+                "Content-Type": "application/json"
+            }
+            
+            azure_url = f"{self.endpoint}/openai/deployments/{self.deployment_id}/chat/completions?api-version={self.api_version}"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(azure_url, json=request_body, headers=headers, timeout=15.0)
+
+                if response.is_success:
+                    response_data = response.json()
+                    classification = response_data.get("choices", [{}])[0].get("message", {}).get("content", "").lower()
+                    return "valid incident" in classification
+                else:
+                    logger.error(f"Validation API error: {response.status_code} - {response.text}")
+                    # Fallback to true to avoid blocking the user if the validation service fails
+                    return True
+        except Exception as ex:
+            logger.error(f"Error calling validation API: {ex}")
+            # Fallback to true to avoid blocking the user
+            return True
+    
     async def analyze_image_async(self, image_base64: str, incident_description: str = "") -> str:
         """Analyze image using Azure OpenAI Vision API"""
         if not self.configured:
@@ -217,6 +269,70 @@ Focus on maritime operations context including PORTNET®, container management, 
         
         # Fallback parsing if JSON fails
         return self._create_fallback_analysis_from_text(ai_response)
+
+    async def generate_escalation_summary_async(self, analysis: IncidentAnalysis) -> str:
+        """Generates a brief escalation summary based on a detailed analysis."""
+        if not self.configured:
+            logger.warning("Using fallback escalation summary - Azure OpenAI not configured.")
+            return f"Escalate: {analysis.incident_type} - Impact: {analysis.impact}. Suspected cause: {analysis.root_cause}"
+
+        logger.info("Generating escalation summary with Azure OpenAI...")
+        try:
+            prompt = self._create_escalation_prompt(analysis)
+            
+            request_body = {
+                "messages": [
+                    {"role": "system", "content": "You are a senior technical support lead creating a concise summary for escalation."},
+                    {"role": "user", "content": prompt}
+                ],
+                "max_tokens": 150,
+                "temperature": 0.5
+            }
+            
+            headers = {
+                "api-key": self.api_key,
+                "Content-Type": "application/json"
+            }
+            
+            azure_url = f"{self.endpoint}/openai/deployments/{self.deployment_id}/chat/completions?api-version={self.api_version}"
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.post(azure_url, json=request_body, headers=headers, timeout=20.0)
+                
+                if response.is_success:
+                    response_data = response.json()
+                    summary = response_data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    logger.info("Escalation summary generated successfully.")
+                    return summary.strip()
+                else:
+                    logger.error(f"Error generating escalation summary from API: {response.status_code} - {response.text}")
+                    return f"Failed to generate AI summary. Escalate: {analysis.incident_type} with '{analysis.urgency}' urgency."
+
+        except Exception as ex:
+            logger.error(f"Exception while generating escalation summary: {ex}")
+            return f"Exception during summary generation. Escalate: {analysis.incident_type} with impact on {', '.join(analysis.affected_systems)}."
+
+    def _create_escalation_prompt(self, analysis: IncidentAnalysis) -> str:
+        """Creates the prompt for generating an escalation summary."""
+        
+        analysis_details = f"""
+        - Incident Type: {analysis.incident_type}
+        - Urgency: {analysis.urgency}
+        - Business Impact: {analysis.impact}
+        - Suspected Root Cause: {analysis.root_cause}
+        - Affected Systems: {', '.join(analysis.affected_systems)}
+        """
+        
+        prompt = f"""Based on the following detailed incident analysis, please write a brief and professional summary for escalating this issue to a senior engineer. 
+        
+        Include the incident type, the business impact, and the suspected root cause. Keep it under 100 words.
+        
+        Detailed Analysis:
+        {analysis_details}
+        
+        Escalation Summary:
+        """
+        return prompt
     
     def _create_fallback_analysis(self, description: str) -> IncidentAnalysis:
         """Create fallback analysis when AI is not available"""

@@ -1,89 +1,188 @@
 {% extends "base.html" %}
 
-{% block title %}Training Data{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="static/css/training.css">
+{% endblock %}
+
+{% block title %}Training Data - AI Duty Officer Assistant{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2>
-                    <i class="fas fa-database me-2"></i>Training Data
-                </h2>
-                <a href="/upload-training" class="btn btn-primary">
-                    <i class="fas fa-plus me-1"></i>Add Training Data
-                </a>
-            </div>
-
-            {% if error %}
-            <div class="alert alert-danger">
-                <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
-            </div>
-            {% endif %}
-
-            {% if success %}
-            <div class="alert alert-success">
-                <i class="fas fa-check-circle me-2"></i>{{ success }}
-            </div>
-            {% endif %}
-
-            {% if training_data %}
+<div class="container-fluid px-0">
+    <!-- Page Header -->
+    <div class="training-header-section mb-5">
+        <div class="container">
             <div class="row">
-                {% for entry in training_data %}
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-start">
-                            <h6 class="card-title mb-0 flex-grow-1">Training Example #{{ loop.index }}</h6>
-                            {% if entry.category %}
-                            <span class="badge bg-secondary ms-2">{{ entry.category }}</span>
-                            {% endif %}
+                <div class="col-12">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div>
+                            <h2 class="fw-bold mb-2">
+                                <i class="fas fa-graduation-cap text-success me-2"></i>
+                                Training Data
+                            </h2>
+                            <p class="text-muted mb-0">AI learning examples and incident patterns</p>
                         </div>
-                        <div class="card-body">
-                            <div class="mb-3">
-                                <strong class="text-primary">Incident:</strong>
-                                <p class="card-text">{{ entry.incident_description[:150] }}{% if entry.incident_description|length > 150 %}...{% endif %}</p>
-                            </div>
-                            
-                            {% if entry.expected_root_cause %}
-                            <div class="mb-3">
-                                <strong class="text-success">Resolution:</strong>
-                                <p class="card-text">{{ entry.expected_root_cause[:150] }}{% if entry.expected_root_cause|length > 150 %}...{% endif %}</p>
-                            </div>
-                            {% endif %}
+                        <a href="/upload-training" class="btn btn-success btn-lg shadow-sm">
+                            <i class="fas fa-plus me-2"></i>
+                            Add Training Data
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                            <div class="mb-2">
-                                <small class="text-muted">
-                                    <i class="fas fa-layer-group me-1"></i>
-                                    Type: <span class="badge bg-info">{{ entry.expected_incident_type or 'Not specified' }}</span>
-                                </small>
-                            </div>
+    <div class="container">
+        <!-- Alerts -->
+        {% if error %}
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
 
-                            {% if entry.expected_urgency %}
-                            <div class="mb-2">
-                                <small class="text-muted">
-                                    <i class="fas fa-exclamation me-1"></i>
-                                    Urgency: 
-                                    {% if entry.expected_urgency == 'Critical' %}
-                                    <span class="badge bg-danger">{{ entry.expected_urgency }}</span>
-                                    {% elif entry.expected_urgency == 'High' %}
-                                    <span class="badge bg-warning">{{ entry.expected_urgency }}</span>
-                                    {% elif entry.expected_urgency == 'Medium' %}
-                                    <span class="badge bg-primary">{{ entry.expected_urgency }}</span>
-                                    {% else %}
-                                    <span class="badge bg-success">{{ entry.expected_urgency }}</span>
-                                    {% endif %}
-                                </small>
-                            </div>
-                            {% endif %}
+        {% if success %}
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
+            <i class="fas fa-check-circle me-2"></i>{{ success }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        {% if training_data %}
+        <!-- Stats Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card-td">
+                    <div class="stat-icon-td bg-success-subtle">
+                        <i class="fas fa-database text-success"></i>
+                    </div>
+                    <div class="stat-content-td">
+                        <h3 class="stat-number-td mb-1" id="totalCount">{{ training_data|length }}</h3>
+                        <p class="stat-label-td mb-0">Total Examples</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card-td">
+                    <div class="stat-icon-td bg-primary-subtle">
+                        <i class="fas fa-eye text-primary"></i>
+                    </div>
+                    <div class="stat-content-td">
+                        <h3 class="stat-number-td mb-1" id="visibleCount">{{ training_data|length }}</h3>
+                        <p class="stat-label-td mb-0">Showing</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card-td">
+                    <div class="stat-icon-td bg-warning-subtle">
+                        <i class="fas fa-tags text-warning"></i>
+                    </div>
+                    <div class="stat-content-td">
+                        <h3 class="stat-number-td mb-1" id="categoryCount">0</h3>
+                        <p class="stat-label-td mb-0">Categories</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6">
+                <div class="stat-card-td">
+                    <div class="stat-icon-td bg-danger-subtle">
+                        <i class="fas fa-exclamation-triangle text-danger"></i>
+                    </div>
+                    <div class="stat-content-td">
+                        <h3 class="stat-number-td mb-1" id="criticalCount">0</h3>
+                        <p class="stat-label-td mb-0">Critical</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filter Section -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body p-4">
+                <div class="row g-3 align-items-center">
+                    <div class="col-lg-6">
+                        <div class="search-box">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="searchInput" class="form-control form-control-lg" placeholder="Search training data...">
                         </div>
-                        <div class="card-footer d-flex justify-content-between align-items-center">
+                    </div>
+                    <div class="col-lg-6 text-lg-end">
+                        <button class="btn btn-secondary" onclick="location.reload()">
+                            <i class="fas fa-sync-alt me-2"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Training Cards Grid -->
+        <div class="row g-4" id="trainingGrid">
+            {% for entry in training_data %}
+            <div class="col-lg-4 col-md-6 training-item" 
+                data-urgency="{{ entry.expected_urgency or 'none' }}"
+                data-category="{{ entry.category or 'none' }}"
+                data-incident="{{ entry.incident_description|lower }}"
+                data-date="{{ entry.created_at.isoformat() if entry.created_at else '' }}">
+                <div class="training-card card h-100 border-0 shadow-hover">
+                    <div class="card-header-td">
+                        <div class="d-flex justify-content-between align-items-start">
                             <div>
-                                <small class="text-muted">
+                                <h6 class="card-title-td mb-1">
+                                    <i class="fas fa-file-alt me-2 text-success"></i>
+                                    Training Example #{{ loop.index }}
+                                </h6>
+                                {% if entry.category %}
+                                <span class="category-badge-td">
+                                    <i class="fas fa-tag me-1"></i>{{ entry.category }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            {% if entry.expected_urgency %}
+                            <span class="urgency-badge-card urgency-{{ entry.expected_urgency|lower }}">
+                                <i class="fas fa-bolt me-1"></i>{{ entry.expected_urgency }}
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong class="section-title text-primary">
+                                <i class="fas fa-exclamation-circle me-1"></i>Incident Description
+                            </strong>
+                            <p class="card-text-td">
+                                {{ entry.incident_description[:150] }}{% if entry.incident_description|length > 150 %}...{% endif %}
+                            </p>
+                        </div>
+                        
+                        {% if entry.expected_root_cause %}
+                        <div class="mb-3">
+                            <strong class="section-title text-success">
+                                <i class="fas fa-check-circle me-1"></i>Expected Resolution
+                            </strong>
+                            <p class="card-text-td">
+                                {{ entry.expected_root_cause[:150] }}{% if entry.expected_root_cause|length > 150 %}...{% endif %}
+                            </p>
+                        </div>
+                        {% endif %}
+
+                        <div class="metadata-section">
+                            <div class="metadata-item">
+                                <i class="fas fa-layer-group text-info me-1"></i>
+                                <span class="metadata-label">Type:</span>
+                                <span class="badge bg-info badge-sm">{{ entry.expected_incident_type or 'Not specified' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer-td">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="meta-info-td">
+                                <small class="d-block text-muted mb-1">
                                     <i class="fas fa-calendar me-1"></i>
-                                    Added: {{ entry.created_at.strftime('%Y-%m-%d %H:%M') if entry.created_at else 'Unknown' }}
+                                    {{ entry.created_at.strftime('%b %d, %Y %H:%M') if entry.created_at else 'Unknown' }}
                                 </small>
-                                <br>
-                                <small class="text-muted">
+                                <small class="d-block text-muted">
                                     <i class="fas fa-source me-1"></i>
                                     Source: {{ entry.source or 'Manual' }}
                                 </small>
@@ -94,53 +193,83 @@
                         </div>
                     </div>
                 </div>
-                {% endfor %}
             </div>
-            
-            <div class="mt-4">
-                <div class="alert alert-info">
-                    <h6 class="alert-heading">
-                        <i class="fas fa-info-circle me-1"></i>How Training Data Works
+            {% endfor %}
+        </div>
+
+        <!-- No Results Message -->
+        <div id="noResults" class="text-center py-5" style="display: none;">
+            <i class="fas fa-search fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted mb-2">No results found</h4>
+            <p class="text-muted mb-3">Try adjusting your search or filter criteria</p>
+            <button class="btn btn-outline-primary" onclick="clearAllFilters()">
+                <i class="fas fa-times me-2"></i>Clear Filters
+            </button>
+        </div>
+        
+        <!-- Info Box -->
+        <div class="info-box-td mt-5">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h6 class="fw-bold mb-2">
+                        <i class="fas fa-lightbulb text-warning me-2"></i>
+                        How Training Data Works
                     </h6>
-                    <p class="mb-0">
+                    <p class="mb-0 text-muted">
                         The AI assistant uses these training examples to learn patterns and improve incident analysis. 
                         It matches new incidents to similar examples and applies learned resolution strategies.
-                        <strong>Total examples: {{ training_data|length }}</strong>
                     </p>
                 </div>
+                <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                    <div class="total-count-badge">
+                        <span class="count-number">{{ training_data|length }}</span>
+                        <span class="count-label">Total Examples</span>
+                    </div>
+                </div>
             </div>
-            
-            {% else %}
-            <div class="text-center py-5">
-                <i class="fas fa-database fa-4x text-muted mb-3"></i>
-                <h4 class="text-muted">No Training Data Found</h4>
-                <p class="text-muted mb-4">Upload your first Excel training file to get started.</p>
-                <a href="/upload-training" class="btn btn-primary btn-lg">
-                    <i class="fas fa-file-excel me-2"></i>Upload Training Data
+        </div>
+        
+        {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <div class="empty-state-content">
+                <div class="empty-state-icon">
+                    <i class="fas fa-database"></i>
+                </div>
+                <h3 class="fw-bold mb-3">No Training Data Found</h3>
+                <p class="text-muted mb-4">Upload your first Excel training file to get started</p>
+                <a href="/upload-training" class="btn btn-success btn-lg shadow-sm">
+                    <i class="fas fa-file-excel me-2"></i>
+                    Upload Training Data
                 </a>
             </div>
-            {% endif %}
         </div>
+        {% endif %}
     </div>
 </div>
 
 <!-- Delete Confirmation Modal -->
-<div class="modal fade" id="deleteModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger-subtle border-0">
+                <h5 class="modal-title fw-bold text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
                     Confirm Delete
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <p>Are you sure you want to delete this training example?</p>
-                <p><strong id="deleteItemName"></strong></p>
-                <p class="text-muted">This action cannot be undone.</p>
+            <div class="modal-body p-4">
+                <p class="mb-3">Are you sure you want to delete this training example?</p>
+                <div class="alert alert-light border">
+                    <strong id="deleteItemName"></strong>
+                </div>
+                <p class="text-danger small mb-0">
+                    <i class="fas fa-exclamation-circle me-1"></i>
+                    This action cannot be undone.
+                </p>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer border-0 bg-light">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
                     <i class="fas fa-trash me-1"></i>Delete
@@ -149,36 +278,8 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
-<script>
-let deleteTrainingId = null;
-
-function deleteTraining(id, name) {
-    deleteTrainingId = id;
-    document.getElementById('deleteItemName').textContent = name;
-    new bootstrap.Modal(document.getElementById('deleteModal')).show();
-}
-
-document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
-    if (deleteTrainingId) {
-        fetch(`/api/training/${deleteTrainingId}`, {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => {
-            if (response.ok) {
-                location.reload();
-            } else {
-                alert('Error deleting training data');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Error deleting training data');
-        });
-    }
-});
-</script>
+{% block extra_js %}
+<script src="/static/js/database_status.js"></script>
 {% endblock %}
