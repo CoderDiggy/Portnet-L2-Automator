@@ -1178,14 +1178,14 @@ async def debug_document_content(
         
         elif document_file.filename.lower().endswith(('.txt', '.pdf')):
             # Use document parser service for other formats
-            extracted_text = await document_parser_service._extract_from_pdf(file_content) if document_file.filename.lower().endswith('.pdf') else file_content.decode('utf-8')
+            extracted_text = await document_parser._extract_from_pdf(file_content) if document_file.filename.lower().endswith('.pdf') else file_content.decode('utf-8')
             content_parts = [{"type": "text", "text": extracted_text}]
         
         else:
             return {"status": "error", "error": "Supported formats: .docx, .pdf, .txt"}
         
         # Use AI analysis from document parser service
-        structure_analysis = document_parser_service.analyze_document_structure(extracted_text)
+        structure_analysis = document_parser.analyze_document_structure(extracted_text)
         
         return {
             "status": "success",
