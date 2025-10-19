@@ -1,151 +1,571 @@
 {% extends "base.html" %}
-{% block title %}Upload Training Data{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Upload Training Data Page Styles */
+.upload-header-section {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    padding: 3rem 0;
+    margin-bottom: 2rem;
+    color: white;
+}
+
+.upload-header-section h2 {
+    color: white;
+}
+
+.upload-header-section p {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.upload-card {
+    border-radius: 16px;
+    border: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.upload-card-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+    border-bottom: 3px solid #11998e;
+    padding: 2rem;
+}
+
+.file-upload-zone {
+    border: 3px dashed #dee2e6;
+    border-radius: 12px;
+    padding: 2.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+    cursor: pointer;
+}
+
+.file-upload-zone:hover {
+    border-color: #11998e;
+    background: rgba(17, 153, 142, 0.05);
+}
+
+.file-upload-zone.drag-over {
+    border-color: #11998e;
+    background: rgba(17, 153, 142, 0.1);
+    transform: scale(1.02);
+}
+
+.upload-icon {
+    font-size: 4rem;
+    color: #11998e;
+    margin-bottom: 1rem;
+}
+
+.info-box-upload {
+    background: linear-gradient(135deg, rgba(13, 110, 253, 0.05) 0%, rgba(13, 110, 253, 0.02) 100%);
+    border-left: 4px solid #0d6efd;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.success-box-upload {
+    background: linear-gradient(135deg, rgba(25, 135, 84, 0.05) 0%, rgba(25, 135, 84, 0.02) 100%);
+    border-left: 4px solid #198754;
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.error-box-upload {
+    background: linear-gradient(135deg, rgba(220, 53, 69, 0.05) 0%, rgba(220, 53, 69, 0.02) 100%);
+    border-left: 4px solid #dc3545;
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.example-table {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.feature-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
+}
+
+.feature-card {
+    text-align: center;
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.feature-card:hover {
+    border-color: #11998e;
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+}
+
+.stats-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: white;
+    border-radius: 8px;
+    margin-right: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.stats-mini i {
+    font-size: 1.25rem;
+}
+
+.tip-item {
+    padding: 0.75rem;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 0.75rem;
+    border-left: 3px solid #11998e;
+}
+
+.progress-container {
+    display: none;
+    margin-top: 1rem;
+}
+
+.upload-btn {
+    position: relative;
+    overflow: hidden;
+}
+
+.upload-btn.uploading {
+    pointer-events: none;
+}
+</style>
+{% endblock %}
+
+{% block title %}Upload Training Data - AI Duty Officer Assistant{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fas fa-upload"></i> Upload Training Data</h3>
-                    <p class="mb-0 text-muted">Upload Excel files with incident examples and resolutions</p>
+<div class="container-fluid px-0">
+    <!-- Page Header -->
+    <div class="upload-header-section">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h2 class="fw-bold mb-2">
+                        <i class="fas fa-cloud-upload-alt me-2"></i>
+                        Upload Training Data
+                    </h2>
+                    <p class="mb-0">Enhance AI learning with incident examples and resolutions</p>
                 </div>
-                <div class="card-body">
-                    {% if success %}
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle"></i> {{ message }}
-                        {% if details %}
-                        <hr>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <strong>Import Summary:</strong>
-                                <ul class="list-unstyled mt-2">
-                                    <li><i class="fas fa-check text-success"></i> Successful: {{ details.success_count }}</li>
-                                    <li><i class="fas fa-times text-danger"></i> Errors: {{ details.error_count }}</li>
-                                    <li><i class="fas fa-table text-info"></i> Total Rows: {{ details.total_rows }}</li>
-                                </ul>
+                <a href="/training" class="btn btn-light btn-lg">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Training Data
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Success Alert -->
+        {% if success %}
+        <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4 success-box-upload" role="alert">
+            <div class="d-flex align-items-start">
+                <i class="fas fa-check-circle fa-2x me-3 text-success"></i>
+                <div class="flex-grow-1">
+                    <h5 class="alert-heading mb-2">
+                        <i class="fas fa-check-circle me-1"></i>Upload Successful!
+                    </h5>
+                    <p class="mb-0">{{ message }}</p>
+                    
+                    {% if details %}
+                    <hr class="my-3">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <strong class="d-block mb-2">Import Summary:</strong>
+                            <div class="stats-mini">
+                                <i class="fas fa-check-circle text-success"></i>
+                                <span><strong>{{ details.success_count }}</strong> Successful</span>
                             </div>
-                            <div class="col-md-6">
-                                <strong>Column Detection:</strong>
-                                <ul class="list-unstyled mt-2">
-                                    <li><i class="fas fa-exclamation-triangle"></i> Incident: {{ details.incident_column or 'Not detected' }}</li>
-                                    <li><i class="fas fa-tools"></i> Resolution: {{ details.resolution_column or 'Not detected' }}</li>
-                                </ul>
+                            <div class="stats-mini">
+                                <i class="fas fa-times-circle text-danger"></i>
+                                <span><strong>{{ details.error_count }}</strong> Errors</span>
+                            </div>
+                            <div class="stats-mini">
+                                <i class="fas fa-table text-info"></i>
+                                <span><strong>{{ details.total_rows }}</strong> Total Rows</span>
                             </div>
                         </div>
-                        {% if details.errors %}
-                        <hr>
-                        <strong>First Few Errors:</strong>
-                        <ul class="list-unstyled mt-2">
-                            {% for error in details.errors %}
-                            <li><small class="text-danger">{{ error }}</small></li>
-                            {% endfor %}
-                        </ul>
-                        {% endif %}
-                        {% endif %}
+                        <div class="col-md-6">
+                            <strong class="d-block mb-2">Column Detection:</strong>
+                            <p class="mb-1">
+                                <i class="fas fa-exclamation-triangle text-warning me-1"></i>
+                                <strong>Incident:</strong> {{ details.incident_column or 'Not detected' }}
+                            </p>
+                            <p class="mb-0">
+                                <i class="fas fa-tools text-primary me-1"></i>
+                                <strong>Resolution:</strong> {{ details.resolution_column or 'Not detected' }}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {% if details.errors %}
+                    <hr class="my-3">
+                    <strong class="d-block mb-2">First Few Errors:</strong>
+                    <div class="alert alert-light border mb-0">
+                        {% for error in details.errors[:5] %}
+                        <small class="d-block text-danger mb-1">
+                            <i class="fas fa-exclamation-circle me-1"></i>{{ error }}
+                        </small>
+                        {% endfor %}
                     </div>
                     {% endif %}
-
-                    {% if error %}
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle"></i> {{ message }}
-                    </div>
                     {% endif %}
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
 
-                    <div class="mb-4">
-                        <h5><i class="fas fa-info-circle text-info"></i> How It Works</h5>
-                        <div class="alert alert-info">
-                            <p><strong>Intelligent Column Detection:</strong> The system automatically detects incident and resolution columns based on:</p>
-                            <ul class="mb-2">
-                                <li><strong>Column Names:</strong> Looks for keywords like "incident", "problem", "resolution", "solution", etc.</li>
-                                <li><strong>Content Analysis:</strong> Analyzes cell content to identify incident descriptions and resolution steps</li>
-                                <li><strong>Smart Fallback:</strong> Uses the first text columns if specific patterns aren't found</li>
-                            </ul>
-                            <p class="mb-0"><strong>Supported Formats:</strong> Excel files (.xlsx, .xls) with any column structure</p>
+        <!-- Error Alert -->
+        {% if error %}
+        <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4 error-box-upload" role="alert">
+            <div class="d-flex align-items-start">
+                <i class="fas fa-exclamation-triangle fa-2x me-3 text-danger"></i>
+                <div class="flex-grow-1">
+                    <h5 class="alert-heading mb-2">Upload Failed</h5>
+                    <p class="mb-0">{{ message }}</p>
+                </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endif %}
+
+        <div class="row g-4">
+            <!-- Upload Form -->
+            <div class="col-lg-7">
+                <div class="card upload-card mb-4">
+                    <div class="upload-card-header">
+                        <h4 class="mb-1">
+                            <i class="fas fa-file-excel text-success me-2"></i>
+                            Upload Excel File
+                        </h4>
+                        <p class="text-muted mb-0">Drag and drop your file or click to browse</p>
+                    </div>
+                    <div class="card-body p-4">
+                        <form action="/upload-training-data" method="post" enctype="multipart/form-data" id="uploadForm">
+                            <div class="file-upload-zone" id="dropZone">
+                                <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                <h5 class="mb-2">Drop your Excel file here</h5>
+                                <p class="text-muted mb-3">or click to browse</p>
+                                <input class="form-control d-none" type="file" id="file" name="file" accept=".xlsx,.xls" required>
+                                <button type="button" class="btn btn-outline-success" onclick="document.getElementById('file').click()">
+                                    <i class="fas fa-folder-open me-2"></i>Choose File
+                                </button>
+                                <p class="text-muted small mt-3 mb-0">Supported formats: .xlsx, .xls</p>
+                            </div>
+                            
+                            <div id="fileInfo" class="mt-3" style="display: none;">
+                                <div class="alert alert-info d-flex align-items-center">
+                                    <i class="fas fa-file-excel fa-2x me-3 text-success"></i>
+                                    <div class="flex-grow-1">
+                                        <strong id="fileName"></strong>
+                                        <br>
+                                        <small class="text-muted" id="fileSize"></small>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearFile()">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="progress-container" id="progressContainer">
+                                <div class="progress" style="height: 30px;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                                         role="progressbar" 
+                                         style="width: 0%" 
+                                         id="uploadProgress">0%</div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-grid gap-2 mt-4">
+                                <button class="btn btn-success btn-lg upload-btn" type="submit" id="uploadBtn">
+                                    <i class="fas fa-cloud-upload-alt me-2"></i>Upload Training Data
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tips Section -->
+                <div class="card upload-card">
+                    <div class="card-header bg-warning-subtle border-0">
+                        <h5 class="mb-0">
+                            <i class="fas fa-lightbulb text-warning me-2"></i>
+                            Tips for Best Results
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="tip-item">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Use descriptive column headers</strong>
+                            <p class="text-muted small mb-0 ms-4">e.g., "Incident Description", "Resolution Steps"</p>
+                        </div>
+                        <div class="tip-item">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Include diverse incident types</strong>
+                            <p class="text-muted small mb-0 ms-4">Different scenarios help the AI learn better patterns</p>
+                        </div>
+                        <div class="tip-item">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Write clear incident descriptions</strong>
+                            <p class="text-muted small mb-0 ms-4">Be specific about what went wrong</p>
+                        </div>
+                        <div class="tip-item">
+                            <i class="fas fa-check-circle text-success me-2"></i>
+                            <strong>Provide actionable resolutions</strong>
+                            <p class="text-muted small mb-0 ms-4">Include step-by-step solutions when possible</p>
                         </div>
                     </div>
-
-                    <form action="/upload-training-data" method="post" enctype="multipart/form-data">
-                        <div class="mb-3">
-                            <label for="file" class="form-label">
-                                <i class="fas fa-file-excel"></i> Excel File
-                            </label>
-                            <input class="form-control" type="file" id="file" name="file" accept=".xlsx,.xls" required>
-                            <div class="form-text">
-                                Upload an Excel file with incident examples and their resolutions. 
-                                The system will automatically detect the appropriate columns.
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <h6><i class="fas fa-lightbulb text-warning"></i> Tips for Best Results</h6>
-                            <ul class="text-muted small">
-                                <li>Use descriptive column headers (e.g., "Incident Description", "Resolution Steps")</li>
-                                <li>Include diverse incident types and detailed resolutions</li>
-                                <li>Ensure incident descriptions are clear and specific</li>
-                                <li>Resolution steps should be actionable and detailed</li>
-                            </ul>
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-primary btn-lg" type="submit">
-                                <i class="fas fa-cloud-upload-alt"></i> Upload Training Data
-                            </button>
-                        </div>
-                    </form>
                 </div>
             </div>
 
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5><i class="fas fa-table"></i> Example Excel Structure</h5>
+            <!-- Information Sidebar -->
+            <div class="col-lg-5">
+                <!-- How It Works -->
+                <div class="card upload-card mb-4">
+                    <div class="card-header bg-info-subtle border-0">
+                        <h5 class="mb-0">
+                            <i class="fas fa-info-circle text-info me-2"></i>
+                            How It Works
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3">Intelligent Column Detection</h6>
+                        <p class="text-muted">The system automatically detects incident and resolution columns based on:</p>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex align-items-start mb-2">
+                                <i class="fas fa-columns text-primary me-2 mt-1"></i>
+                                <div>
+                                    <strong>Column Names</strong>
+                                    <p class="text-muted small mb-0">Looks for keywords like "incident", "problem", "resolution", "solution"</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex align-items-start mb-2">
+                                <i class="fas fa-search text-success me-2 mt-1"></i>
+                                <div>
+                                    <strong>Content Analysis</strong>
+                                    <p class="text-muted small mb-0">Analyzes cell content to identify descriptions and steps</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-0">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-magic text-warning me-2 mt-1"></i>
+                                <div>
+                                    <strong>Smart Fallback</strong>
+                                    <p class="text-muted small mb-0">Uses first text columns if patterns aren't found</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <p class="text-muted">Your Excel file can have any structure. Here are some examples that work well:</p>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Option 1: Separate Columns</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-bordered">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Incident Description</th>
-                                            <th>Resolution Steps</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>Server not responding</td>
-                                            <td>1. Check server status<br>2. Restart if needed</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
+
+                <!-- Features -->
+                <div class="card upload-card mb-4">
+                    <div class="card-header bg-light border-0">
+                        <h5 class="mb-0">
+                            <i class="fas fa-star text-warning me-2"></i>
+                            Key Features
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="feature-card">
+                                    <div class="feature-icon bg-primary-subtle mx-auto">
+                                        <i class="fas fa-robot text-primary"></i>
+                                    </div>
+                                    <strong class="d-block">AI Learning</strong>
+                                    <small class="text-muted">Patterns & Recognition</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="feature-card">
+                                    <div class="feature-icon bg-success-subtle mx-auto">
+                                        <i class="fas fa-check-double text-success"></i>
+                                    </div>
+                                    <strong class="d-block">Auto Detection</strong>
+                                    <small class="text-muted">Smart Columns</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="feature-card">
+                                    <div class="feature-icon bg-warning-subtle mx-auto">
+                                        <i class="fas fa-file-excel text-warning"></i>
+                                    </div>
+                                    <strong class="d-block">Excel Support</strong>
+                                    <small class="text-muted">.xlsx & .xls</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="feature-card">
+                                    <div class="feature-icon bg-info-subtle mx-auto">
+                                        <i class="fas fa-sync-alt text-info"></i>
+                                    </div>
+                                    <strong class="d-block">Instant Import</strong>
+                                    <small class="text-muted">Fast Processing</small>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <h6>Option 2: Any Column Names</h6>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-bordered">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Problem</th>
-                                            <th>Solution</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>Application error 500</td>
-                                            <td>Check logs and restart application</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                    </div>
+                </div>
+
+                <!-- Example Structure -->
+                <div class="card upload-card">
+                    <div class="card-header bg-light border-0">
+                        <h5 class="mb-0">
+                            <i class="fas fa-table text-primary me-2"></i>
+                            Example Excel Structure
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted small">Your Excel file can have any structure. Here's an example:</p>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-sm table-bordered example-table mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Incident Description</th>
+                                        <th>Resolution Steps</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><small>Server not responding</small></td>
+                                        <td><small>Check status & restart</small></td>
+                                    </tr>
+                                    <tr>
+                                        <td><small>Application error 500</small></td>
+                                        <td><small>Review logs, fix code</small></td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
+                        
+                        <p class="text-muted small mt-3 mb-0">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Column names like "Problem", "Solution", "Issue", "Fix" also work!
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+// File Upload Handling
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('file');
+const fileInfo = document.getElementById('fileInfo');
+const uploadForm = document.getElementById('uploadForm');
+const uploadBtn = document.getElementById('uploadBtn');
+const progressContainer = document.getElementById('progressContainer');
+
+// Drag and drop functionality
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, preventDefaults, false);
+});
+
+function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+}
+
+['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-over'), false);
+});
+
+['dragleave', 'drop'].forEach(eventName => {
+    dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-over'), false);
+});
+
+dropZone.addEventListener('drop', handleDrop, false);
+
+function handleDrop(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    fileInput.files = files;
+    displayFileInfo(files[0]);
+}
+
+// Click to upload
+dropZone.addEventListener('click', () => fileInput.click());
+
+// File selection
+fileInput.addEventListener('change', function() {
+    if (this.files.length > 0) {
+        displayFileInfo(this.files[0]);
+    }
+});
+
+// Display file information
+function displayFileInfo(file) {
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSize').textContent = formatFileSize(file.size);
+    fileInfo.style.display = 'block';
+}
+
+// Clear file
+function clearFile() {
+    fileInput.value = '';
+    fileInfo.style.display = 'none';
+}
+
+// Format file size
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
+    else return (bytes / 1048576).toFixed(2) + ' MB';
+}
+
+// Form submission with progress
+uploadForm.addEventListener('submit', function(e) {
+    if (fileInput.files.length === 0) {
+        e.preventDefault();
+        alert('Please select a file to upload');
+        return;
+    }
+    
+    uploadBtn.classList.add('uploading');
+    uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading...';
+    uploadBtn.disabled = true;
+    
+    progressContainer.style.display = 'block';
+    
+    // Simulate progress (replace with actual XHR if needed)
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += 10;
+        document.getElementById('uploadProgress').style.width = progress + '%';
+        document.getElementById('uploadProgress').textContent = progress + '%';
+        
+        if (progress >= 90) {
+            clearInterval(interval);
+        }
+    }, 200);
+});
+</script>
 {% endblock %}

@@ -1,209 +1,439 @@
 {% extends "base.html" %}
 
-{% block title %}Database Status{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="static/css/database_status.css">
+{% endblock %}
+
+{% block title %}Database Status - AI Duty Officer Assistant{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row">
-        <div class="col-12">
-            <h2>
-                <i class="fas fa-database me-2"></i>Database Status & Contents
-            </h2>
-            
-            <!-- Summary Cards -->
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <i class="fas fa-book me-2"></i>Knowledge Base
-                            </h5>
-                            <h2 class="mb-0">{{ kb_count }}</h2>
-                            <small>Total entries stored</small>
+<div class="container-fluid px-0">
+    <!-- Page Header -->
+    <div class="status-header-section mb-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                        <div>
+                            <h2 class="fw-bold mb-2">
+                                <i class="fas fa-database text-primary me-2"></i>
+                                Database Status & Analytics
+                            </h2>
+                            <p class="text-muted mb-0">Real-time system monitoring and data insights</p>
                         </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card bg-success text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">
-                                <i class="fas fa-graduation-cap me-2"></i>Training Data
-                            </h5>
-                            <h2 class="mb-0">{{ td_count }}</h2>
-                            <small>Training examples</small>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-primary" onclick="location.reload()">
+                                <i class="fas fa-sync-alt me-2"></i>Refresh
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Knowledge Base Entries -->
-            {% if recent_knowledge %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h4 class="mb-0">
-                        <i class="fas fa-book me-2"></i>Recent Knowledge Entries
-                        <small class="text-muted">(Most recent {{ recent_knowledge|length }} entries)</small>
-                    </h4>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Status Overview Cards -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-6">
+                <div class="status-card">
+                    <div class="status-card-icon bg-primary-gradient">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <div class="status-card-content">
+                        <h6 class="status-label">Knowledge Base</h6>
+                        <h2 class="status-number">{{ kb_count }}</h2>
+                        <p class="status-desc">Total entries stored</p>
+                    </div>
+                    <div class="status-badge">
+                        <i class="fas fa-check-circle"></i> Active
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Title</th>
-                                    <th>Category</th>
-                                    <th>Type</th>
-                                    <th>Source</th>
-                                    <th>Content Size</th>
-                                    <th>Usage</th>
-                                    <th>Created</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for entry in recent_knowledge %}
-                                <tr>
-                                    <td><strong>#{{ entry.id }}</strong></td>
-                                    <td>
-                                        <div class="fw-bold">{{ entry.title }}</div>
-                                        {% if entry.keywords %}
-                                        <small class="text-muted">
-                                            Keywords: {{ entry.keywords.split(',')[:3]|join(', ') }}{% if entry.keywords.split(',')|length > 3 %}...{% endif %}
-                                        </small>
+            </div>
+            
+            <div class="col-lg-6">
+                <div class="status-card">
+                    <div class="status-card-icon bg-success-gradient">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div class="status-card-content">
+                        <h6 class="status-label">Training Data</h6>
+                        <h2 class="status-number">{{ td_count }}</h2>
+                        <p class="status-desc">Training examples</p>
+                    </div>
+                    <div class="status-badge">
+                        <i class="fas fa-check-circle"></i> Active
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Knowledge Base Section -->
+        {% if recent_knowledge %}
+        <div class="card data-card border-0 shadow-sm mb-5">
+            <div class="card-header-custom">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                    <div>
+                        <h5 class="mb-1 fw-bold">
+                            <i class="fas fa-book text-primary me-2"></i>
+                            Knowledge Base Entries
+                        </h5>
+                        <small class="text-muted">Showing <span id="kb-visible">{{ recent_knowledge|length }}</span> of {{ recent_knowledge|length }} entries</small>
+                    </div>
+                    <div class="table-actions">
+                        <!-- Knowledge Filter -->
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-primary dropdown-toggle" 
+                                    type="button" 
+                                    id="kbFilterBtn" 
+                                    data-bs-toggle="dropdown" 
+                                    data-bs-auto-close="outside"
+                                    aria-expanded="false">
+                                <i class="fas fa-filter me-1"></i>
+                                <span class="filter-text">Filter</span>
+                                <span class="badge bg-primary ms-1 kb-filter-count" style="display: none;">0</span>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end kb-filter-dropdown" aria-labelledby="kbFilterBtn">
+                                <div class="filter-header">
+                                    <h6 class="mb-0">Filter Options</h6>
+                                    <button class="btn btn-sm btn-link text-danger p-0" onclick="clearKBFilters()">Clear All</button>
+                                </div>
+                                <hr class="my-0">
+                                
+                                <div class="filter-body">
+                                    <div class="filter-section">
+                                        <h6 class="filter-title"><i class="fas fa-sort me-2"></i>Sort By</h6>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="kbSort" id="kbNewest" value="newest" checked>
+                                            <label class="form-check-label" for="kbNewest">Newest First</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="kbSort" id="kbOldest" value="oldest">
+                                            <label class="form-check-label" for="kbOldest">Oldest First</label>
+                                        </div>
+                                    </div>
+                                    
+                                    <hr class="my-0">
+                                    
+                                    <div class="filter-section">
+                                        <h6 class="filter-title"><i class="fas fa-folder me-2"></i>Category</h6>
+                                        <div id="kbCategoryFilters"></div>
+                                    </div>
+                                </div>
+                                
+                                <hr class="my-0">
+                                
+                                <div class="filter-footer">
+                                    <button class="btn btn-primary w-100 btn-sm" onclick="applyKBFilters()">
+                                        <i class="fas fa-check me-1"></i>Apply Filters
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <a href="/knowledge" class="btn btn-sm btn-primary">
+                            <i class="fas fa-eye me-1"></i>View All
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom mb-0" id="kbTable">
+                        <thead>
+                            <tr>
+                                <th width="60">ID</th>
+                                <th>Title & Keywords</th>
+                                <th width="120">Category</th>
+                                <th width="100">Type</th>
+                                <th width="100">Source</th>
+                                <th width="120">Content Size</th>
+                                <th width="100">Usage</th>
+                                <th width="150">Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in recent_knowledge %}
+                            <tr class="table-row-hover" data-category="{{ entry.category or 'none' }}" data-date="{{ entry.created_at.isoformat() if entry.created_at else '' }}">
+                                <td class="fw-bold text-primary">#{{ entry.id }}</td>
+                                <td>
+                                    <div class="entry-title">{{ entry.title }}</div>
+                                    {% if entry.keywords %}
+                                    <div class="entry-keywords">
+                                        {% for keyword in entry.keywords.split(',')[:3] %}
+                                        <span class="keyword-mini">{{ keyword.strip() }}</span>
+                                        {% endfor %}
+                                        {% if entry.keywords.split(',')|length > 3 %}
+                                        <span class="keyword-mini-more">+{{ entry.keywords.split(',')|length - 3 }}</span>
                                         {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if entry.category %}
-                                        <span class="badge bg-secondary">{{ entry.category }}</span>
-                                        {% else %}
-                                        <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">{{ entry.type or 'Reference' }}</span>
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">{{ entry.source or 'Manual' }}</small>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark">{{ entry.content|length }} chars</span>
-                                    </td>
-                                    <td>
-                                        <i class="fas fa-eye me-1"></i>{{ entry.view_count or 0 }}
+                                    </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if entry.category %}
+                                    <span class="badge-table bg-secondary">{{ entry.category }}</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge-table bg-info">{{ entry.type or 'Reference' }}</span>
+                                </td>
+                                <td>
+                                    <span class="source-text">{{ entry.source or 'Manual' }}</span>
+                                </td>
+                                <td>
+                                    <div class="size-indicator">
+                                        <div class="size-bar" style="width: {{ (entry.content|length / 1000 * 100)|round|int if entry.content|length < 1000 else 100 }}%"></div>
+                                        <span class="size-text">{{ entry.content|length }} chars</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="usage-info">
+                                        <i class="fas fa-eye text-muted me-1"></i>{{ entry.view_count or 0 }}
                                         {% if entry.last_used %}
                                         <br><small class="text-muted">{{ entry.last_used.strftime('%m/%d %H:%M') }}</small>
                                         {% endif %}
-                                    </td>
-                                    <td>
-                                        <small>{{ entry.created_at.strftime('%Y-%m-%d %H:%M') if entry.created_at else 'Unknown' }}</small>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="date-text">
+                                        {{ entry.created_at.strftime('%Y-%m-%d') if entry.created_at else 'Unknown' }}
+                                        <br><small class="text-muted">{{ entry.created_at.strftime('%H:%M') if entry.created_at else '' }}</small>
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state-card mb-5">
+            <div class="empty-icon">
+                <i class="fas fa-book-open"></i>
+            </div>
+            <h5 class="fw-bold mb-2">No Knowledge Base Entries</h5>
+            <p class="text-muted mb-3">Upload your first knowledge document to get started.</p>
+            <a href="/upload-knowledge" class="btn btn-primary">
+                <i class="fas fa-upload me-2"></i>Upload Knowledge Document
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- Training Data Section -->
+        {% if recent_training %}
+        <div class="card data-card border-0 shadow-sm mb-5">
+            <div class="card-header-custom">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+                    <div>
+                        <h5 class="mb-1 fw-bold">
+                            <i class="fas fa-graduation-cap text-success me-2"></i>
+                            Training Data
+                        </h5>
+                        <small class="text-muted">Showing <span id="td-visible">{{ recent_training|length }}</span> of {{ recent_training|length }} examples</small>
                     </div>
-                </div>
-            </div>
-            {% else %}
-            <div class="alert alert-info">
-                <h5 class="alert-heading">No Knowledge Base Entries</h5>
-                <p class="mb-0">No knowledge documents have been uploaded yet. <a href="/upload-knowledge" class="alert-link">Upload your first document</a> to get started.</p>
-            </div>
-            {% endif %}
-            
-            <!-- Training Data -->
-            {% if recent_training %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h4 class="mb-0">
-                        <i class="fas fa-graduation-cap me-2"></i>Recent Training Data
-                        <small class="text-muted">(Most recent {{ recent_training|length }} entries)</small>
-                    </h4>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Incident Description</th>
-                                    <th>Expected Type</th>
-                                    <th>Urgency</th>
-                                    <th>Category</th>
-                                    <th>Created</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for training in recent_training %}
-                                <tr>
-                                    <td><strong>#{{ training.id }}</strong></td>
-                                    <td>
-                                        <div class="text-truncate" style="max-width: 300px;">
-                                            {{ training.incident_description }}
+                    <div class="table-actions">
+                        <!-- Training Filter -->
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-success dropdown-toggle" 
+                                    type="button" 
+                                    id="tdFilterBtn" 
+                                    data-bs-toggle="dropdown" 
+                                    data-bs-auto-close="outside"
+                                    aria-expanded="false">
+                                <i class="fas fa-filter me-1"></i>
+                                <span class="filter-text">Filter</span>
+                                <span class="badge bg-success ms-1 td-filter-count" style="display: none;">0</span>
+                                
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end td-filter-dropdown" aria-labelledby="tdFilterBtn">
+                                <div class="filter-header">
+                                    <h6 class="mb-0">Filter Options</h6>
+                                    <button class="btn btn-sm btn-link text-danger p-0" onclick="clearTDFilters()">Clear All</button>
+                                </div>
+                                <hr class="my-0">
+                                
+                                <div class="filter-body">
+                                    <div class="filter-section">
+                                        <h6 class="filter-title"><i class="fas fa-sort me-2"></i>Sort By</h6>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="tdSort" id="tdNewest" value="newest" checked>
+                                            <label class="form-check-label" for="tdNewest">Newest First</label>
                                         </div>
-                                    </td>
-                                    <td>
-                                        {% if training.expected_incident_type %}
-                                        <span class="badge bg-primary">{{ training.expected_incident_type }}</span>
-                                        {% else %}
-                                        <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if training.expected_urgency %}
-                                        {% if training.expected_urgency == 'High' or training.expected_urgency == 'Critical' %}
-                                        <span class="badge bg-danger">{{ training.expected_urgency }}</span>
-                                        {% elif training.expected_urgency == 'Medium' %}
-                                        <span class="badge bg-warning">{{ training.expected_urgency }}</span>
-                                        {% else %}
-                                        <span class="badge bg-success">{{ training.expected_urgency }}</span>
-                                        {% endif %}
-                                        {% else %}
-                                        <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if training.category %}
-                                        <span class="badge bg-secondary">{{ training.category }}</span>
-                                        {% else %}
-                                        <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <small>{{ training.created_at.strftime('%Y-%m-%d %H:%M') if training.created_at else 'Unknown' }}</small>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="tdSort" id="tdOldest" value="oldest">
+                                            <label class="form-check-label" for="tdOldest">Oldest First</label>
+                                        </div>
+                                    </div>
+                                    
+                                    <hr class="my-0">
+                                    
+                                    <div class="filter-section">
+                                        <h6 class="filter-title"><i class="fas fa-exclamation-triangle me-2"></i>Urgency Level</h6>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="tdUrgAll" value="all" checked>
+                                            <label class="form-check-label" for="tdUrgAll">All Levels</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input td-urgency-cb" type="checkbox" value="Critical">
+                                            <label class="form-check-label"><span class="text-danger fw-bold">Critical</span></label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input td-urgency-cb" type="checkbox" value="High">
+                                            <label class="form-check-label"><span class="text-warning fw-bold">High</span></label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input td-urgency-cb" type="checkbox" value="Medium">
+                                            <label class="form-check-label"><span class="text-primary fw-bold">Medium</span></label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input td-urgency-cb" type="checkbox" value="Low">
+                                            <label class="form-check-label"><span class="text-success fw-bold">Low</span></label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <hr class="my-0">
+                                
+                                <div class="filter-footer">
+                                    <button class="btn btn-success w-100 btn-sm" onclick="applyTDFilters()">
+                                        <i class="fas fa-check me-1"></i>Apply Filters
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <a href="/training" class="btn btn-sm btn-success">
+                            <i class="fas fa-eye me-1"></i>View All
+                        </a>
                     </div>
                 </div>
             </div>
-            {% else %}
-            <div class="alert alert-secondary">
-                <h5 class="alert-heading">No Training Data</h5>
-                <p class="mb-0">No training examples have been added yet.</p>
-            </div>
-            {% endif %}
-            
-            <!-- Database Info -->
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">
-                        <i class="fas fa-info-circle me-2"></i>Database Information
-                    </h5>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom mb-0" id="tdTable">
+                        <thead>
+                            <tr>
+                                <th width="60">ID</th>
+                                <th>Incident Description</th>
+                                <th width="150">Expected Type</th>
+                                <th width="120">Urgency</th>
+                                <th width="120">Category</th>
+                                <th width="150">Created</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for training in recent_training %}
+                            <tr class="table-row-hover" data-urgency="{{ training.expected_urgency or 'none' }}" data-date="{{ training.created_at.isoformat() if training.created_at else '' }}">
+                                <td class="fw-bold text-success">#{{ training.id }}</td>
+                                <td>
+                                    <div class="incident-desc" title="{{ training.incident_description }}">
+                                        {{ training.incident_description[:100] }}{% if training.incident_description|length > 100 %}...{% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if training.expected_incident_type %}
+                                    <span class="badge-table bg-primary">{{ training.expected_incident_type }}</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if training.expected_urgency %}
+                                    <span class="urgency-badge urgency-{{ training.expected_urgency|lower }}">
+                                        <i class="fas fa-bolt me-1"></i>{{ training.expected_urgency }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if training.category %}
+                                    <span class="badge-table bg-secondary">{{ training.category }}</span>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="date-text">
+                                        {{ training.created_at.strftime('%Y-%m-%d') if training.created_at else 'Unknown' }}
+                                        <br><small class="text-muted">{{ training.created_at.strftime('%H:%M') if training.created_at else '' }}</small>
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>Database Type:</strong> SQLite</p>
-                            <p><strong>Location:</strong> <code>duty_officer_assistant.db</code></p>
-                            <p><strong>Status:</strong> <span class="badge bg-success">Active</span></p>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state-card mb-5">
+            <div class="empty-icon">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <h5 class="fw-bold mb-2">No Training Data</h5>
+            <p class="text-muted mb-3">No training examples have been added yet.</p>
+        </div>
+        {% endif %}
+
+        <!-- System Information -->
+        <div class="card info-card border-0 shadow-sm">
+            <div class="card-header-custom">
+                <h5 class="mb-0 fw-bold">
+                    <i class="fas fa-info-circle text-info me-2"></i>
+                    System Information
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <div class="info-section">
+                            <h6 class="info-title">
+                                <i class="fas fa-database me-2 text-primary"></i>Database Configuration
+                            </h6>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Type:</span>
+                                    <span class="info-value">SQLite</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Location:</span>
+                                    <code class="info-code">duty_officer_assistant.db</code>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Status:</span>
+                                    <span class="status-indicator status-active">
+                                        <i class="fas fa-circle"></i> Active
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <p><strong>Knowledge Entries:</strong> {{ kb_count }}</p>
-                            <p><strong>Training Examples:</strong> {{ td_count }}</p>
-                            <p><strong>AI Integration:</strong> <span class="badge bg-success">Enabled</span></p>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="info-section">
+                            <h6 class="info-title">
+                                <i class="fas fa-chart-bar me-2 text-success"></i>Data Statistics
+                            </h6>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <span class="info-label">Knowledge Entries:</span>
+                                    <span class="info-value-highlight">{{ kb_count }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">Training Examples:</span>
+                                    <span class="info-value-highlight">{{ td_count }}</span>
+                                </div>
+                                <div class="info-item">
+                                    <span class="info-label">AI Integration:</span>
+                                    <span class="status-indicator status-enabled">
+                                        <i class="fas fa-circle"></i> Enabled
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -211,4 +441,8 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/database_status.js"></script>
 {% endblock %}
