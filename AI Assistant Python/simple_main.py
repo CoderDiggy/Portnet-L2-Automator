@@ -10,6 +10,7 @@ import pandas as pd
 import io
 from typing import List
 import base64
+import os
 
 # Load environment variables from .env file
 load_dotenv()
@@ -21,12 +22,14 @@ logger = logging.getLogger(__name__)
 # Create FastAPI app
 app = FastAPI(title="AI Duty Officer Assistant", version="1.0.0")
 
-# Setup static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# Resolve paths relative to this file
+script_dir = os.path.dirname(os.path.abspath(__file__))
+
+# Setup static files with absolute path to avoid CWD issues
+static_dir = os.path.join(script_dir, "static")
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 # Setup templates with correct path
-import os
-script_dir = os.path.dirname(os.path.abspath(__file__))
 templates_dir = os.path.join(script_dir, "app", "templates")
 templates = Jinja2Templates(directory=templates_dir)
 
@@ -1222,4 +1225,4 @@ async def debug_document_content(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="localhost", port=8001)
