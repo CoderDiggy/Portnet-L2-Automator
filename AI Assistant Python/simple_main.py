@@ -44,6 +44,8 @@ from app.services.openai_service import OpenAIService
 from app.services.knowledge_base_service import KnowledgeBaseService
 from app.services.training_data_service import TrainingDataService
 from app.services.incident_analyzer import IncidentAnalyzer
+from app.services.error_matcher_service import ErrorTypeMatcher
+from app.services.document_parser_service import DocumentParserService
 from app.models.database import Base
 from app.database import get_db, engine
 from sqlalchemy.orm import Session
@@ -53,6 +55,9 @@ Base.metadata.create_all(bind=engine)
 
 # Initialize the OpenAI service
 openai_service = OpenAIService()
+
+# Initialize the Document Parser service
+document_parser = DocumentParserService(openai_service)
 
 async def analyze_image_with_ai(image_content: bytes, content_type: str) -> str:
     """Analyze image using Azure OpenAI Vision API"""
@@ -203,9 +208,10 @@ async def analyze_post(
     incident_description: str = Form(...),
     incident_source: str = Form("Manual"),
     incident_images: List[UploadFile] = File(default=[]),
+    log_files: List[UploadFile] = File(default=[]),
     db: Session = Depends(get_db)
 ):
-    """Analyze incident - POST"""
+    """Extract information from incident description for user review"""
     try:
         # Validate incident input first
         validation_result = await validate_incident_input(incident_description)
@@ -235,11 +241,12 @@ async def analyze_post(
         
         logger.info(f"Input validation passed: {validation_result['reason']}")
         
-        # Process uploaded images
-        image_analysis = ""
-        uploaded_images = []
+        # Store uploaded files temporarily in session or save them
+        has_images = bool(incident_images and incident_images[0].filename)
+        has_logs = bool(log_files and log_files[0].filename)
         
-        if incident_images and incident_images[0].filename:  # Check if actual files were uploaded
+        # Process uploaded files if any
+        if has_images:
             logger.info(f"Processing {len(incident_images)} uploaded images")
             
             # Create uploads directory if it doesn't exist
@@ -249,30 +256,145 @@ async def analyze_post(
             
             for image in incident_images:
                 if image.filename and image.content_type.startswith('image/'):
-                    # Save image
+                    # Save image temporarily
                     import uuid
                     file_extension = os.path.splitext(image.filename)[1]
-                    unique_filename = f"{uuid.uuid4()}{file_extension}"
+                    unique_filename = f"temp_{uuid.uuid4()}{file_extension}"
                     file_path = os.path.join(uploads_dir, unique_filename)
                     
                     content = await image.read()
                     with open(file_path, "wb") as f:
                         f.write(content)
-                    
+        
+        # Extract structured information using AI
+        extracted_info = await openai_service.extract_incident_information(incident_description)
+        logger.info(f"Extracted incident information: {list(extracted_info.keys())}")
+        
+        # Render extraction review template
+        return templates.TemplateResponse("extraction_review.html", {
+            "request": request,
+            "extracted_info": extracted_info,
+            "original_description": incident_description,
+            "incident_source": incident_source,
+            "has_images": has_images,
+            "has_logs": has_logs
+        })
+        
+    except Exception as ex:
+        logger.error(f"Error in information extraction: {ex}")
+        return templates.TemplateResponse("analyze.html", {
+            "request": request,
+            "error": f"Error extracting information: {str(ex)}",
+            "description": incident_description,
+            "test_cases": []
+        })
+
+@app.post("/analyze-confirmed")
+async def analyze_confirmed(
+    request: Request,
+    original_description: str = Form(...),
+    incident_source: str = Form("Manual"),
+    has_images: str = Form(default=""),
+    has_logs: str = Form(default=""),
+    # Extracted and user-reviewed fields
+    incident_date: str = Form(...),
+    location: str = Form(...),
+    vessel_name: str = Form(...),
+    vessel_type: str = Form(...),
+    vessel_flag: str = Form(...),
+    incident_type: str = Form(...),
+    severity_level: str = Form(...),
+    weather_conditions: str = Form(...),
+    personnel_involved: str = Form(...),
+    injuries_fatalities: str = Form(...),
+    equipment_involved: str = Form(...),
+    cargo_details: str = Form(...),
+    immediate_actions: str = Form(...),
+    estimated_damage: str = Form(...),
+    authorities_notified: str = Form(...),
+    environmental_impact: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Perform full incident analysis with confirmed information"""
+    try:
+        # Create enhanced description from structured information
+        structured_info = {
+            "original_description": original_description,
+            "incident_date": incident_date,
+            "location": location,
+            "vessel_name": vessel_name,
+            "vessel_type": vessel_type,
+            "vessel_flag": vessel_flag,
+            "incident_type": incident_type,
+            "severity_level": severity_level,
+            "weather_conditions": weather_conditions,
+            "personnel_involved": personnel_involved,
+            "injuries_fatalities": injuries_fatalities,
+            "equipment_involved": equipment_involved,
+            "cargo_details": cargo_details,
+            "immediate_actions": immediate_actions,
+            "estimated_damage": estimated_damage,
+            "authorities_notified": authorities_notified,
+            "environmental_impact": environmental_impact
+        }
+        
+        # Create enhanced description that includes structured information
+        enhanced_description = f"""
+INCIDENT DESCRIPTION:
+{original_description}
+
+STRUCTURED INFORMATION SUMMARY:
+Date/Time: {incident_date}
+Location: {location}
+Vessel: {vessel_name} ({vessel_type}, Flag: {vessel_flag})
+Incident Type: {incident_type}
+Severity: {severity_level}
+Weather: {weather_conditions}
+Personnel: {personnel_involved}
+Injuries/Fatalities: {injuries_fatalities}
+Equipment: {equipment_involved}
+Cargo: {cargo_details}
+Immediate Actions: {immediate_actions}
+Damage: {estimated_damage}
+Authorities: {authorities_notified}
+Environmental Impact: {environmental_impact}
+"""
+        
+        # Process any uploaded files if indicated
+        image_analysis = ""
+        uploaded_images = []
+        
+        if has_images == "true":
+            # Find and process temporary images
+            import os
+            import glob
+            uploads_dir = os.path.join(os.path.dirname(__file__), "static", "uploads")
+            temp_files = glob.glob(os.path.join(uploads_dir, "temp_*"))
+            
+            for file_path in temp_files:
+                if os.path.exists(file_path):
+                    filename = os.path.basename(file_path)
+                    # Remove temp_ prefix for display
+                    display_name = filename.replace("temp_", "")
                     uploaded_images.append({
-                        "filename": unique_filename,
-                        "original_name": image.filename,
-                        "path": f"/static/uploads/{unique_filename}",
-                        "size": len(content)
+                        "filename": filename,
+                        "original_name": display_name,
+                        "path": f"/static/uploads/{filename}",
+                        "size": os.path.getsize(file_path)
                     })
                     
-                    # Analyze image with AI vision (placeholder for now)
-                    image_analysis += await analyze_image_with_ai(content, image.content_type)
+                    # Analyze image with AI vision
+                    try:
+                        with open(file_path, "rb") as f:
+                            content = f.read()
+                        image_analysis += await analyze_image_with_ai(content, "image/jpeg")
+                    except Exception as e:
+                        logger.error(f"Error analyzing image {filename}: {e}")
         
-        # Combine text description with image analysis
-        combined_description = incident_description
+        # Combine enhanced description with image analysis
+        combined_description = enhanced_description
         if image_analysis:
-            combined_description += f"\n\nImage Analysis:\n{image_analysis}"
+            combined_description += f"\n\nIMAGE ANALYSIS:\n{image_analysis}"
         
         # Create mock incident
         incident = MockIncident(combined_description, incident_source)
@@ -301,15 +423,27 @@ async def analyze_post(
         
         resolution_plan = AIResolutionPlan(resolution_data)
         
-        # Create mock view model
+        # Create mock view model with enhanced information
         class MockViewModel:
-            def __init__(self, incident, analysis, resolution_plan, uploaded_images=None):
+            def __init__(self, incident, analysis, resolution_plan, uploaded_images=None, structured_info=None):
                 self.incident = incident
                 self.analysis = analysis  
                 self.resolution_plan = resolution_plan
                 self.uploaded_images = uploaded_images or []
+                self.structured_info = structured_info or {}
         
-        view_model = MockViewModel(incident, analysis, resolution_plan, uploaded_images)
+        view_model = MockViewModel(incident, analysis, resolution_plan, uploaded_images, structured_info)
+        
+        # Clean up temporary files
+        if has_images == "true":
+            import glob
+            uploads_dir = os.path.join(os.path.dirname(__file__), "static", "uploads")
+            temp_files = glob.glob(os.path.join(uploads_dir, "temp_*"))
+            for file_path in temp_files:
+                try:
+                    os.remove(file_path)
+                except Exception as e:
+                    logger.warning(f"Could not remove temp file {file_path}: {e}")
         
         return templates.TemplateResponse("results.html", {
             "request": request,
@@ -320,15 +454,6 @@ async def analyze_post(
     except Exception as ex:
         logger.error(f"Error analyzing incident: {ex}")
         return RedirectResponse(url="/analyze?error=Analysis failed", status_code=302)
-
-@app.get("/test-case")
-async def test_case(request: Request, description: str = ""):
-    """Test case with preloaded description"""
-    return templates.TemplateResponse("analyze.html", {
-        "request": request,
-        "test_cases": [],
-        "preloaded_description": description
-    })
 
 @app.get("/upload-knowledge")
 async def upload_knowledge_get(request: Request):
@@ -711,6 +836,389 @@ async def delete_knowledge(knowledge_id: int, db: Session = Depends(get_db)):
         db.rollback()
         return {"error": str(ex)}
 
+# Smart Solutions Routes
+
+@app.get("/smart-solutions")
+async def smart_solutions_get(request: Request):
+    """Smart solutions page - GET"""
+    return templates.TemplateResponse("smart_solutions.html", {"request": request})
+
+@app.post("/smart-solutions")
+async def smart_solutions_post(
+    request: Request,
+    problem_statement: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Find solutions based on error type matching - POST"""
+    try:
+        # Extract error type from problem statement
+        error_matcher = ErrorTypeMatcher(db)
+        error_type = await error_matcher.extract_and_store_error_type(problem_statement)
+        
+        # Find matching solutions
+        solutions = await error_matcher.find_matching_solutions(error_type)
+        
+        logger.info(f"Found solutions for error type '{error_type}': {solutions['total_solutions']} total")
+        
+        return templates.TemplateResponse("smart_solutions.html", {
+            "request": request,
+            "problem_statement": problem_statement,
+            "error_type": error_type,
+            "solutions": solutions,
+            "total_solutions": solutions['total_solutions']
+        })
+        
+    except Exception as ex:
+        logger.error(f"Error finding smart solutions: {ex}")
+        return templates.TemplateResponse("smart_solutions.html", {
+            "request": request,
+            "problem_statement": problem_statement,
+            "error": f"Error finding solutions: {str(ex)}"
+        })
+
+@app.post("/api/mark-useful")
+async def mark_solution_useful(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Mark a solution as useful (API endpoint)"""
+    try:
+        data = await request.json()
+        
+        error_type = data.get("error_type")
+        solution_type = data.get("solution_type")
+        solution_id = data.get("solution_id")
+        problem_statement = data.get("problem_statement")
+        solution_title = data.get("solution_title", "")
+        
+        # Validate required fields
+        if not all([error_type, solution_type, solution_id, problem_statement]):
+            return {"error": "Missing required fields"}
+        
+        # Mark solution as useful
+        error_matcher = ErrorTypeMatcher(db)
+        success = await error_matcher.mark_solution_useful(
+            error_type=error_type,
+            solution_type=solution_type,
+            solution_id=int(solution_id),
+            problem_statement=problem_statement,
+            user_id="web_user",
+            feedback_notes=f"Marked useful for solution: {solution_title}"
+        )
+        
+        if success:
+            logger.info(f"Solution marked as useful: {solution_type}:{solution_id} for error_type '{error_type}'")
+            return {"message": "Solution marked as useful", "success": True}
+        else:
+            return {"error": "Failed to mark solution as useful", "success": False}
+        
+    except Exception as ex:
+        logger.error(f"Error marking solution as useful: {ex}")
+        return {"error": f"Error: {str(ex)}", "success": False}
+
+@app.get("/api/solution-details/{solution_type}/{solution_id}")
+async def get_solution_details(
+    solution_type: str,
+    solution_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get full details of a solution (API endpoint)"""
+    try:
+        if solution_type == "knowledge_base":
+            from app.models.database import KnowledgeBase
+            solution = db.query(KnowledgeBase).filter(KnowledgeBase.id == solution_id).first()
+            
+            if not solution:
+                return {"error": "Knowledge base solution not found"}
+            
+            return {
+                "id": solution.id,
+                "title": solution.title,
+                "content": solution.content,
+                "type": solution.type,
+                "category": solution.category,
+                "keywords": solution.keywords,
+                "priority": solution.priority,
+                "created_at": solution.created_at.isoformat() if solution.created_at else None,
+                "solution_type": "knowledge_base"
+            }
+            
+        elif solution_type == "incident_case":
+            from app.models.database import TrainingData
+            solution = db.query(TrainingData).filter(TrainingData.id == solution_id).first()
+            
+            if not solution:
+                return {"error": "Incident case solution not found"}
+            
+            return {
+                "id": solution.id,
+                "title": f"Incident Case: {solution.expected_incident_type}",
+                "content": solution.incident_description,
+                "resolution": solution.expected_root_cause,
+                "impact": solution.expected_impact,
+                "urgency": solution.expected_urgency,
+                "affected_systems": solution.expected_affected_systems,
+                "category": solution.category,
+                "created_at": solution.created_at.isoformat() if solution.created_at else None,
+                "solution_type": "incident_case"
+            }
+        else:
+            return {"error": "Invalid solution type"}
+        
+    except Exception as ex:
+        logger.error(f"Error getting solution details: {ex}")
+        return {"error": f"Error: {str(ex)}"}
+
+@app.get("/api/error-analytics")
+async def get_error_analytics(
+    error_type: str = None,
+    db: Session = Depends(get_db)
+):
+    """Get analytics for error types and solution effectiveness"""
+    try:
+        error_matcher = ErrorTypeMatcher(db)
+        analytics = await error_matcher.get_error_type_analytics(error_type)
+        return analytics
+        
+    except Exception as ex:
+        logger.error(f"Error getting analytics: {ex}")
+        return {"error": f"Error: {str(ex)}"}
+
+# Document Parsing API Endpoints
+@app.post("/api/parse-bulk-content")
+async def parse_bulk_content(
+    request: Request,
+    bulk_content: str = Form(...),
+    content_type: str = Form("knowledge_base"),
+    default_category: str = Form("General"),
+    db: Session = Depends(get_db)
+):
+    """Parse bulk pasted content into individual entries using AI"""
+    try:
+        logger.info(f"Parsing bulk content of {len(bulk_content)} characters")
+        
+        # Parse content using AI
+        entries = await document_parser.parse_bulk_content(bulk_content, content_type)
+        
+        # Apply default category if not set by AI
+        for entry in entries:
+            if not entry.get('category') or entry['category'] == 'General':
+                entry['category'] = default_category
+        
+        logger.info(f"Successfully parsed {len(entries)} entries")
+        
+        return {
+            "status": "success",
+            "entries": entries,
+            "message": f"Successfully parsed {len(entries)} entries from content"
+        }
+        
+    except Exception as ex:
+        logger.error(f"Error parsing bulk content: {ex}")
+        return {"status": "error", "error": f"Error parsing content: {str(ex)}"}
+
+@app.post("/api/parse-uploaded-file")
+async def parse_uploaded_file(
+    request: Request,
+    document_file: UploadFile = File(...),
+    upload_content_type: str = Form("knowledge_base"),
+    upload_category: str = Form("General"),
+    db: Session = Depends(get_db)
+):
+    """Parse uploaded document file into individual entries"""
+    try:
+        # Validate file size (10MB limit)
+        if document_file.size > 10 * 1024 * 1024:
+            return {"status": "error", "error": "File size exceeds 10MB limit"}
+        
+                        # Validate file type
+        allowed_extensions = {'.docx', '.pdf', '.txt'}  # Removed .doc for now
+        file_extension = os.path.splitext(document_file.filename)[1].lower()
+        if file_extension not in allowed_extensions:
+            return {"status": "error", "error": f"Unsupported file type: {file_extension}. Supported formats: .docx, .pdf, .txt"}
+        
+        logger.info(f"Processing uploaded file: {document_file.filename}")
+        
+        # Read file content
+        file_content = await document_file.read()
+        
+        # Parse file using AI
+        entries = await document_parser.parse_file_content(file_content, document_file.filename)
+        
+        # Apply default category
+        for entry in entries:
+            if not entry.get('category') or entry['category'] == 'General':
+                entry['category'] = upload_category
+        
+        logger.info(f"Successfully parsed {len(entries)} entries from file")
+        
+        return {
+            "status": "success",
+            "entries": entries,
+            "message": f"Successfully parsed {len(entries)} entries from {document_file.filename}"
+        }
+        
+    except Exception as ex:
+        logger.error(f"Error parsing uploaded file: {ex}")
+        return {"status": "error", "error": f"Error parsing file: {str(ex)}"}
+
+@app.post("/api/save-bulk-entries")
+async def save_bulk_entries(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Save multiple parsed entries to the knowledge base"""
+    try:
+        data = await request.json()
+        entries = data.get("entries", [])
+        
+        if not entries:
+            return {"status": "error", "error": "No entries provided"}
+        
+        from app.models.database import KnowledgeBase
+        
+        saved_count = 0
+        for entry_data in entries:
+            try:
+                # Create new knowledge base entry
+                kb_entry = KnowledgeBase(
+                    title=entry_data.get('title', '').strip()[:200],
+                    content=entry_data.get('content', entry_data.get('solution', entry_data.get('description', ''))).strip()[:5000],
+                    category=entry_data.get('category', 'General').strip()[:100],
+                    type='Solution',
+                    tags=entry_data.get('tags', '').strip()[:500],
+                    keywords=entry_data.get('keywords', '').strip()[:500],
+                    priority=entry_data.get('priority', 'Medium'),
+                    source='Document Import',
+                    status='Active',
+                    view_count=0,
+                    created_at=datetime.now(),
+                    updated_at=datetime.now(),
+                    created_by='AI Assistant'
+                )
+                
+                db.add(kb_entry)
+                saved_count += 1
+                
+            except Exception as entry_error:
+                logger.warning(f"Failed to save entry: {entry_error}")
+                continue
+        
+        db.commit()
+        
+        logger.info(f"Successfully saved {saved_count} entries to knowledge base")
+        
+        return {
+            "status": "success",
+            "saved_count": saved_count,
+            "message": f"Successfully saved {saved_count} entries to the knowledge base"
+        }
+        
+    except Exception as ex:
+        logger.error(f"Error saving bulk entries: {ex}")
+        db.rollback()
+        return {"status": "error", "error": f"Error saving entries: {str(ex)}"}
+
+# Knowledge Base Management Route
+@app.get("/knowledge-base-manage")
+async def knowledge_base_manage(request: Request):
+    """Enhanced knowledge base management page with AI parsing"""
+    return templates.TemplateResponse("knowledge_base_manage.html", {
+        "request": request,
+        "title": "Knowledge Base Management"
+    })
+
+@app.post("/api/debug-document-content")
+async def debug_document_content(
+    request: Request,
+    document_file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """Debug endpoint to show raw extracted content from document with AI analysis"""
+    try:
+        # Read file content
+        file_content = await document_file.read()
+        
+        # Extract text content using document parser
+        extracted_text = ""
+        content_parts = []
+        
+        if document_file.filename.lower().endswith('.docx'):
+            from docx import Document
+            import io
+            
+            doc = Document(io.BytesIO(file_content))
+            
+            # Extract all text with structure info
+            for paragraph in doc.paragraphs:
+                if paragraph.text.strip():
+                    style = paragraph.style.name if paragraph.style else "Normal"
+                    content_parts.append({
+                        "type": "paragraph",
+                        "style": style,
+                        "text": paragraph.text.strip()
+                    })
+                    extracted_text += paragraph.text + "\n"
+            
+            # Extract tables
+            for table in doc.tables:
+                for row in table.rows:
+                    row_text = []
+                    for cell in row.cells:
+                        if cell.text.strip():
+                            row_text.append(cell.text.strip())
+                    if row_text:
+                        table_text = " | ".join(row_text)
+                        content_parts.append({
+                            "type": "table_row",
+                            "text": table_text
+                        })
+                        extracted_text += table_text + "\n"
+        
+        elif document_file.filename.lower().endswith(('.txt', '.pdf')):
+            # Use document parser service for other formats
+            extracted_text = await document_parser_service._extract_from_pdf(file_content) if document_file.filename.lower().endswith('.pdf') else file_content.decode('utf-8')
+            content_parts = [{"type": "text", "text": extracted_text}]
+        
+        else:
+            return {"status": "error", "error": "Supported formats: .docx, .pdf, .txt"}
+        
+        # Use AI analysis from document parser service
+        structure_analysis = document_parser_service.analyze_document_structure(extracted_text)
+        
+        return {
+            "status": "success",
+            "filename": document_file.filename,
+            "file_size_bytes": len(file_content),
+            
+            # Structure from document format
+            "document_structure": {
+                "total_paragraphs": len([p for p in content_parts if p["type"] == "paragraph"]),
+                "total_tables": len([p for p in content_parts if p["type"] == "table_row"]),
+                "content_structure": content_parts[:20],  # First 20 items
+            },
+            
+            # AI analysis from document parser
+            "ai_analysis": structure_analysis,
+            
+            # Raw text info
+            "raw_text_info": {
+                "total_length": len(extracted_text),
+                "preview": extracted_text[:1500] + "..." if len(extracted_text) > 1500 else extracted_text,
+                "lines_count": len(extracted_text.splitlines()),
+            },
+            
+            # Extraction potential estimate
+            "extraction_estimate": {
+                "expected_entries": max(1, structure_analysis.get("potential_sections", 0)),
+                "confidence": "high" if structure_analysis.get("potential_sections", 0) > 5 else "medium" if structure_analysis.get("potential_sections", 0) > 2 else "low"
+            }
+        }
+            
+    except Exception as ex:
+        logger.error(f"Error debugging document: {ex}")
+        return {"status": "error", "error": f"Error: {str(ex)}"}
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8002)
+    uvicorn.run(app, host="0.0.0.0", port=8001)

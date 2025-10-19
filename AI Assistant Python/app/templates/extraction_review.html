@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+
+{% block title %}Review Incident Information - AI Duty Officer Assistant{% endblock %}
+
+{% block content %}
+<style>
+.step-item {
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.progress {
+    height: 8px;
+}
+
+.progress-bar-animated {
+    animation: progress-bar-stripes 1s linear infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.loading-pulse {
+    animation: pulse 2s infinite;
+}
+</style>
+
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <div class="d-flex align-items-center mb-4">
+            <h2 class="fw-bold mb-0">
+                <i class="fas fa-table text-primary me-2"></i>
+                Review Extracted Information
+            </h2>
+        </div>
+        
+        <!-- Extracted Information Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Incident Information Summary
+                </h5>
+                <small class="text-light">Review and complete any missing information before analysis</small>
+            </div>
+            <div class="card-body">
+                <form method="post" action="/analyze-confirmed" enctype="multipart/form-data">
+                    <!-- Hidden fields to preserve original data -->
+                    <input type="hidden" name="original_description" value="{{ original_description }}">
+                    <input type="hidden" name="incident_source" value="{{ incident_source }}">
+                    
+                    <!-- Preserve uploaded files -->
+                    {% if has_images %}
+                        <input type="hidden" name="has_images" value="true">
+                    {% endif %}
+                    {% if has_logs %}
+                        <input type="hidden" name="has_logs" value="true">
+                    {% endif %}
+                    
+                    <div class="row g-4">
+                        <!-- Basic Incident Information -->
+                        <div class="col-md-6">
+                            <h6 class="text-primary fw-bold mb-3">
+                                <i class="fas fa-calendar-alt me-2"></i>Basic Information
+                            </h6>
+                            
+                            <div class="mb-3">
+                                <label for="incident_date" class="form-label fw-bold">Incident Date & Time</label>
+                                <input type="text" class="form-control" id="incident_date" name="incident_date" 
+                                       value="{{ extracted_info.incident_date }}" 
+                                       placeholder="YYYY-MM-DD HH:MM or description">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="location" class="form-label fw-bold">Location</label>
+                                <input type="text" class="form-control" id="location" name="location" 
+                                       value="{{ extracted_info.location }}" 
+                                       placeholder="Specific berth, terminal, or area">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="incident_type" class="form-label fw-bold">Incident Type</label>
+                                <input type="text" class="form-control" id="incident_type" name="incident_type" 
+                                       value="{{ extracted_info.incident_type }}" 
+                                       placeholder="e.g., collision, fire, cargo damage">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="severity_level" class="form-label fw-bold">Severity Level</label>
+                                <select class="form-select" id="severity_level" name="severity_level">
+                                    <option value="Critical" {% if extracted_info.severity_level == "Critical" %}selected{% endif %}>Critical</option>
+                                    <option value="High" {% if extracted_info.severity_level == "High" %}selected{% endif %}>High</option>
+                                    <option value="Medium" {% if extracted_info.severity_level == "Medium" %}selected{% endif %}>Medium</option>
+                                    <option value="Low" {% if extracted_info.severity_level == "Low" %}selected{% endif %}>Low</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Vessel Information -->
+                        <div class="col-md-6">
+                            <h6 class="text-primary fw-bold mb-3">
+                                <i class="fas fa-ship me-2"></i>Vessel Information
+                            </h6>
+                            
+                            <div class="mb-3">
+                                <label for="vessel_name" class="form-label fw-bold">Vessel Name</label>
+                                <input type="text" class="form-control" id="vessel_name" name="vessel_name" 
+                                       value="{{ extracted_info.vessel_name }}" 
+                                       placeholder="Name of vessel involved">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="vessel_type" class="form-label fw-bold">Vessel Type</label>
+                                <input type="text" class="form-control" id="vessel_type" name="vessel_type" 
+                                       value="{{ extracted_info.vessel_type }}" 
+                                       placeholder="e.g., container ship, bulk carrier">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="vessel_flag" class="form-label fw-bold">Vessel Flag</label>
+                                <input type="text" class="form-control" id="vessel_flag" name="vessel_flag" 
+                                       value="{{ extracted_info.vessel_flag }}" 
+                                       placeholder="Flag state/nationality">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="cargo_details" class="form-label fw-bold">Cargo Details</label>
+                                <input type="text" class="form-control" id="cargo_details" name="cargo_details" 
+                                       value="{{ extracted_info.cargo_details }}" 
+                                       placeholder="Type and quantity of cargo">
+                            </div>
+                        </div>
+                        
+                        <!-- Environmental & Personnel -->
+                        <div class="col-md-6">
+                            <h6 class="text-primary fw-bold mb-3">
+                                <i class="fas fa-cloud-sun me-2"></i>Environmental & Personnel
+                            </h6>
+                            
+                            <div class="mb-3">
+                                <label for="weather_conditions" class="form-label fw-bold">Weather Conditions</label>
+                                <input type="text" class="form-control" id="weather_conditions" name="weather_conditions" 
+                                       value="{{ extracted_info.weather_conditions }}" 
+                                       placeholder="Weather/sea conditions at time">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="personnel_involved" class="form-label fw-bold">Personnel Involved</label>
+                                <input type="text" class="form-control" id="personnel_involved" name="personnel_involved" 
+                                       value="{{ extracted_info.personnel_involved }}" 
+                                       placeholder="Number and type of personnel">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="injuries_fatalities" class="form-label fw-bold">Injuries/Fatalities</label>
+                                <input type="text" class="form-control" id="injuries_fatalities" name="injuries_fatalities" 
+                                       value="{{ extracted_info.injuries_fatalities }}" 
+                                       placeholder="Any injuries or fatalities">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="environmental_impact" class="form-label fw-bold">Environmental Impact</label>
+                                <input type="text" class="form-control" id="environmental_impact" name="environmental_impact" 
+                                       value="{{ extracted_info.environmental_impact }}" 
+                                       placeholder="Environmental impact or concerns">
+                            </div>
+                        </div>
+                        
+                        <!-- Equipment & Response -->
+                        <div class="col-md-6">
+                            <h6 class="text-primary fw-bold mb-3">
+                                <i class="fas fa-cog me-2"></i>Equipment & Response
+                            </h6>
+                            
+                            <div class="mb-3">
+                                <label for="equipment_involved" class="form-label fw-bold">Equipment Involved</label>
+                                <input type="text" class="form-control" id="equipment_involved" name="equipment_involved" 
+                                       value="{{ extracted_info.equipment_involved }}" 
+                                       placeholder="Specific equipment or machinery">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="immediate_actions" class="form-label fw-bold">Immediate Actions</label>
+                                <textarea class="form-control" id="immediate_actions" name="immediate_actions" rows="2" 
+                                          placeholder="Immediate actions taken">{{ extracted_info.immediate_actions }}</textarea>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="estimated_damage" class="form-label fw-bold">Estimated Damage</label>
+                                <input type="text" class="form-control" id="estimated_damage" name="estimated_damage" 
+                                       value="{{ extracted_info.estimated_damage }}" 
+                                       placeholder="Damage description or estimate">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="authorities_notified" class="form-label fw-bold">Authorities Notified</label>
+                                <input type="text" class="form-control" id="authorities_notified" name="authorities_notified" 
+                                       value="{{ extracted_info.authorities_notified }}" 
+                                       placeholder="Which authorities were notified">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Original Description -->
+                    <div class="mt-4">
+                        <h6 class="text-primary fw-bold mb-3">
+                            <i class="fas fa-file-text me-2"></i>Original Description
+                        </h6>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <p class="mb-0">{{ original_description }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="d-flex gap-3 mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg flex-fill" id="proceedBtn">
+                            <span id="proceedIcon" class="fas fa-brain me-2"></span>
+                            <span id="proceedText">Proceed with Analysis</span>
+                        </button>
+                        <a href="/analyze" class="btn btn-outline-secondary btn-lg" id="backBtn">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Back to Edit
+                        </a>
+                    </div>
+                    
+                    <!-- Loading Animation for Analysis -->
+                    <div id="analysisLoadingState" class="text-center mt-4" style="display: none;">
+                        <div class="card border-primary">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center justify-content-center mb-3">
+                                    <div class="spinner-border text-primary me-3" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1 text-primary">Analyzing Incident...</h5>
+                                        <p class="mb-0 text-muted">AI is performing comprehensive analysis using your structured information</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="progress mb-3">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                         id="analysisProgress" 
+                                         role="progressbar" 
+                                         style="width: 0%">
+                                    </div>
+                                </div>
+                                
+                                <div id="analysisSteps" class="text-start">
+                                    <div class="step-item" data-step="1">
+                                        <i class="fas fa-circle-notch fa-spin text-primary me-2"></i>
+                                        <span>Processing structured incident information...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Information Notice -->
+        <div class="alert alert-info" role="alert">
+            <h6 class="alert-heading">
+                <i class="fas fa-lightbulb me-2"></i>
+                Information Review
+            </h6>
+            <p class="mb-0">
+                Please review and complete any missing information above. The AI has extracted available details from your description, 
+                but you can add or modify any fields to ensure comprehensive analysis. Fields marked as "Not specified" were not 
+                found in the original description.
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-save form data to localStorage
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const inputs = form.querySelectorAll('input, textarea, select');
+    
+    // Load saved data
+    inputs.forEach(input => {
+        const savedValue = localStorage.getItem('extraction_' + input.name);
+        if (savedValue && input.value === 'Not specified') {
+            input.value = savedValue;
+        }
+    });
+    
+    // Save data on change
+    inputs.forEach(input => {
+        input.addEventListener('change', function() {
+            localStorage.setItem('extraction_' + this.name, this.value);
+        });
+    });
+    
+    // Analysis loading animation functionality
+    const proceedBtn = document.getElementById('proceedBtn');
+    const proceedIcon = document.getElementById('proceedIcon');
+    const proceedText = document.getElementById('proceedText');
+    const analysisLoadingState = document.getElementById('analysisLoadingState');
+    const backBtn = document.getElementById('backBtn');
+    
+    form.addEventListener('submit', function(e) {
+        showAnalysisLoadingState();
+    });
+    
+    function showAnalysisLoadingState() {
+        // Update button state
+        proceedBtn.disabled = true;
+        proceedBtn.classList.remove('btn-primary');
+        proceedBtn.classList.add('btn-secondary');
+        
+        // Update button content
+        proceedIcon.className = 'spinner-border spinner-border-sm me-2';
+        proceedText.textContent = 'Analyzing...';
+        
+        // Disable back button
+        backBtn.style.opacity = '0.5';
+        backBtn.style.pointerEvents = 'none';
+        
+        // Show loading animation
+        analysisLoadingState.style.display = 'block';
+        
+        // Scroll to loading animation
+        analysisLoadingState.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Simulate progress steps
+        simulateAnalysisProgress();
+        
+        // Add opacity to form
+        const formCard = document.querySelector('.card');
+        formCard.style.opacity = '0.7';
+        formCard.style.transition = 'opacity 0.3s ease';
+    }
+    
+    function simulateAnalysisProgress() {
+        const progressBar = document.getElementById('analysisProgress');
+        const stepsContainer = document.getElementById('analysisSteps');
+        
+        const steps = [
+            { text: "Processing structured incident information...", delay: 0 },
+            { text: "Analyzing incident severity and impact...", delay: 1500 },
+            { text: "Consulting knowledge base for similar incidents...", delay: 3000 },
+            { text: "Generating resolution recommendations...", delay: 4500 },
+            { text: "Finalizing comprehensive analysis...", delay: 6000 }
+        ];
+        
+        let currentStep = 0;
+        
+        function updateStep() {
+            if (currentStep < steps.length) {
+                // Update progress bar
+                const progress = ((currentStep + 1) / steps.length) * 100;
+                progressBar.style.width = progress + '%';
+                
+                // Update step text
+                if (currentStep > 0) {
+                    // Mark previous step as complete
+                    const prevStepElement = stepsContainer.children[currentStep - 1];
+                    const prevIcon = prevStepElement.querySelector('i');
+                    prevIcon.className = 'fas fa-check-circle text-success me-2';
+                }
+                
+                // Add current step
+                if (currentStep < steps.length) {
+                    const stepElement = document.createElement('div');
+                    stepElement.className = 'step-item mt-2';
+                    stepElement.innerHTML = `
+                        <i class="fas fa-circle-notch fa-spin text-primary me-2"></i>
+                        <span>${steps[currentStep].text}</span>
+                    `;
+                    stepsContainer.appendChild(stepElement);
+                }
+                
+                currentStep++;
+                
+                if (currentStep < steps.length) {
+                    setTimeout(updateStep, steps[currentStep].delay - steps[currentStep - 1].delay);
+                } else {
+                    // Mark final step as complete
+                    setTimeout(() => {
+                        const finalStepElement = stepsContainer.children[stepsContainer.children.length - 1];
+                        const finalIcon = finalStepElement.querySelector('i');
+                        finalIcon.className = 'fas fa-check-circle text-success me-2';
+                        progressBar.style.width = '100%';
+                    }, 1000);
+                }
+            }
+        }
+        
+        updateStep();
+    }
+    
+    // Clear saved data on form submit
+    form.addEventListener('submit', function() {
+        inputs.forEach(input => {
+            localStorage.removeItem('extraction_' + input.name);
+        });
+    });
+});
+</script>
+{% endblock %}

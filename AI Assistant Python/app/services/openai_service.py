@@ -350,6 +350,185 @@ Focus on maritime operations context including PORTNET®, container management, 
                 return "SIMPLE_REPLY"
             return "POTENTIAL_INCIDENT"
     
+    async def extract_error_type(self, problem_statement: str) -> str:
+        """Extract generic error type from problem statement for pattern matching"""
+        error_type_prompt = f"""
+        You are an expert in IT systems error classification. Extract a generic error type from the problem statement.
+        
+        Problem Statement: {problem_statement}
+        
+        Rules for error type extraction:
+        1. Remove specific values, partner names, locations, container numbers, etc.
+        2. Focus on the generic pattern or issue type
+        3. Use underscore_case format
+        4. Keep it concise (2-4 words max)
+        5. Make it reusable for similar problems
+        
+        Examples:
+        "Unexpected qualifier 'BN' in EQD segment" → "unexpected_qualifier"
+        "Time zone drift UTC+0 for Partner-E" → "timezone_drift"  
+        "Spike in DLQ messages" → "dlq_spike"
+        "Container CMAU123456 stuck in processing" → "container_stuck"
+        "EDI message validation failed for REF-IFT-001" → "edi_validation_failure"
+        "Database timeout during vessel arrival" → "database_timeout"
+        "Port gate access denied for truck TRK789" → "gate_access_denied"
+        "Invoice generation failure for partner XYZ" → "invoice_generation_failure"
+        
+        Return ONLY the error type (no quotes, no explanation):
+        """
+        
+        if not self.configured:
+            logger.warning("Azure OpenAI not configured, using fallback error type extraction")
+            # Simple fallback pattern matching
+            statement_lower = problem_statement.lower()
+            
+            if "qualifier" in statement_lower:
+                return "unexpected_qualifier"
+            elif "timezone" in statement_lower or "time zone" in statement_lower:
+                return "timezone_drift"
+            elif "dlq" in statement_lower or "dead letter" in statement_lower:
+                return "dlq_spike"
+            elif "stuck" in statement_lower:
+                return "processing_stuck"
+            elif "validation" in statement_lower and ("failed" in statement_lower or "error" in statement_lower):
+                return "validation_failure"
+            elif "timeout" in statement_lower:
+                return "timeout_error"
+            elif "access" in statement_lower and "denied" in statement_lower:
+                return "access_denied"
+            elif "generation" in statement_lower and "failed" in statement_lower:
+                return "generation_failure"
+            elif "connection" in statement_lower and ("failed" in statement_lower or "error" in statement_lower):
+                return "connection_error"
+            elif "duplicate" in statement_lower:
+                return "duplicate_entry"
+            elif "missing" in statement_lower:
+                return "missing_data"
+            else:
+                return "general_error"
+        
+        try:
+            messages = [
+                {"role": "system", "content": "You are an IT systems error classification expert. Extract generic error types for pattern matching."},
+                {"role": "user", "content": error_type_prompt}
+            ]
+            
+            response = await self.get_completion(messages, max_tokens=50, temperature=0.1)
+            
+            # Clean up the response
+            error_type = response.strip().lower()
+            # Remove quotes if present
+            error_type = error_type.strip('"\'')
+            # Ensure underscore format
+            error_type = error_type.replace(' ', '_').replace('-', '_')
+            # Remove any non-alphanumeric characters except underscores
+            import re
+            error_type = re.sub(r'[^a-z0-9_]', '', error_type)
+            
+            if not error_type:
+                error_type = "general_error"
+                
+            logger.info(f"Extracted error type: '{error_type}' from problem: '{problem_statement[:50]}...'")
+            return error_type
+            
+        except Exception as e:
+            logger.error(f"Error extracting error type: {e}")
+            return "general_error"
+    
+    async def extract_incident_information(self, description: str) -> dict:
+        """Extract structured information from incident description for user review"""
+        extraction_prompt = f"""
+        You are a maritime incident information extraction expert. Extract the following key information from the incident description. If information is not explicitly mentioned, return "Not specified" for that field.
+
+        Incident Description: {description}
+
+        Please extract and format the response as JSON with these exact fields:
+
+        {{
+            "incident_date": "Date/time of incident (YYYY-MM-DD HH:MM format if available)",
+            "location": "Specific location/berth/terminal where incident occurred",
+            "vessel_name": "Name of vessel involved",
+            "vessel_type": "Type of vessel (container ship, bulk carrier, etc.)",
+            "vessel_flag": "Flag state/nationality of vessel",
+            "incident_type": "Type of incident (collision, grounding, fire, cargo damage, etc.)",
+            "severity_level": "Severity (Critical/High/Medium/Low)",
+            "weather_conditions": "Weather/sea conditions at time of incident",
+            "personnel_involved": "Number and type of personnel involved",
+            "injuries_fatalities": "Any injuries or fatalities reported",
+            "equipment_involved": "Specific equipment, machinery, or infrastructure involved",
+            "cargo_details": "Type and quantity of cargo if relevant",
+            "immediate_actions": "Immediate actions taken or emergency response",
+            "estimated_damage": "Estimated damage or impact description",
+            "authorities_notified": "Which authorities or agencies were notified",
+            "environmental_impact": "Any environmental impact or concerns"
+        }}
+
+        Return ONLY the JSON object, no additional text.
+        """
+        
+        if not self.configured:
+            logger.warning("Azure OpenAI not configured, using fallback extraction")
+            # Create a basic extraction from the description
+            return {
+                "incident_date": "Not specified",
+                "location": "Not specified", 
+                "vessel_name": "Not specified",
+                "vessel_type": "Not specified",
+                "vessel_flag": "Not specified",
+                "incident_type": "General incident",
+                "severity_level": "Medium",
+                "weather_conditions": "Not specified",
+                "personnel_involved": "Not specified",
+                "injuries_fatalities": "Not specified",
+                "equipment_involved": "Not specified",
+                "cargo_details": "Not specified",
+                "immediate_actions": "Not specified",
+                "estimated_damage": "Not specified",
+                "authorities_notified": "Not specified",
+                "environmental_impact": "Not specified"
+            }
+        
+        try:
+            messages = [
+                {"role": "system", "content": "You are a maritime incident information extraction expert. Extract key information and return ONLY a valid JSON object."},
+                {"role": "user", "content": extraction_prompt}
+            ]
+            
+            response = await self.get_completion(messages, max_tokens=600, temperature=0.1)
+            
+            # Parse JSON response
+            import re
+            json_match = re.search(r'\{.*\}', response, re.DOTALL)
+            if json_match:
+                extracted_info = json.loads(json_match.group())
+                logger.info(f"Successfully extracted incident information: {list(extracted_info.keys())}")
+                return extracted_info
+            else:
+                logger.warning("Could not parse JSON from extraction response")
+                raise ValueError("Invalid JSON response")
+                
+        except Exception as e:
+            logger.error(f"Error extracting incident information: {e}")
+            # Return fallback structure
+            return {
+                "incident_date": "Not specified",
+                "location": "Not specified",
+                "vessel_name": "Not specified", 
+                "vessel_type": "Not specified",
+                "vessel_flag": "Not specified",
+                "incident_type": "General incident",
+                "severity_level": "Medium",
+                "weather_conditions": "Not specified",
+                "personnel_involved": "Not specified",
+                "injuries_fatalities": "Not specified",
+                "equipment_involved": "Not specified",
+                "cargo_details": "Not specified",
+                "immediate_actions": "Not specified",
+                "estimated_damage": "Not specified",
+                "authorities_notified": "Not specified",
+                "environmental_impact": "Not specified"
+            }
+    
     async def generate_resolution_plan_async(self, description: str, analysis: IncidentAnalysis) -> dict:
         """Generate resolution plan using AI based on incident description and analysis"""
         
